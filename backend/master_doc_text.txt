@@ -1,0 +1,420 @@
+NirikshAmrita
+Agentic Shift Safety & Early Warning System
+MASTER PROJECT HANDOVER DOCUMENT — Use this to continue in any new chat
+Amrita Vishwa Vidyapeetham, Faridabad  |  B.Tech AI & Data Science  |  June 2026
+1. Project Context — Read This First
+IMPORTANT: Paste this entire document into a new Claude chat with the message: 'Continue helping me with NirikshAmrita — here is the full project context.' Claude will pick up exactly where we left off.
+What is this project?
+NirikshAmrita (also called NurseWatch-AI in the original PDF) is an agentic hospital patient monitoring system built as an internship project at Amrita Vishwa Vidyapeetham, Faridabad campus.
+It monitors patients across nursing shifts, detects deterioration trends before they become emergencies, generates AI-written shift handover notes (SBAR format), and escalates unacknowledged alerts automatically up the chain of command.
+Team
+Person
+Role
+Current job
+Madan (you)
+Lead — Backend + AI + Innovations
+Fix backend agents, add Gemini LLM, add 4 innovations, connect frontend to backend
+Anna (teammate 1)
+Frontend
+Built the entire UI (Lovable tool). Needs to fix admin pages + login + logo
+Teammate 3
+Data + Escalation
+Seed 50 real patients x 14 days x 3 shifts, wire up escalation notifications
+Key Links
+What
+Link
+Live app (frontend)
+https://nirikshamrita-heartbeat.annamath444.workers.dev
+Backend API
+https://calm-motivation-production-c24c.up.railway.app
+API docs (Swagger)
+https://calm-motivation-production-c24c.up.railway.app/docs
+GitHub repo
+https://github.com/annamath444/nirikshamrita-heartbeat (branch: master)
+Admin login
+admin@amritahospital.org / amrita123
+Nurse login
+nurse1@amrita.org / amrita123
+2. Honest State of the App Right Now
+WARNING: The app looks real but most of it is FAKE DATA. Read this section carefully before touching any code.
+What Anna claimed
+What the code actually does
+Real?
+Nurse patient list works
+Pulls from hospital.ts mock file, not API
+NO
+Vitals entry saves to DB
+Form submit just sets done=true, no API call
+NO
+SBAR handover works
+Hardcoded template strings, not AI, not from DB
+NO
+Login works against real DB
+Admin: just navigates. Nurse: checks mock array
+NO
+Backend agents are working
+Backend code exists on Railway but frontend never calls it
+PARTIAL
+Logo is working
+Logo file is .asset.json (Lovable format), actual PNG missing
+NO
+What IS genuinely solid
+Beautiful professional React UI (built with Lovable AI tool — explains the speed)
+FastAPI backend deployed on Railway with real PostgreSQL database
+Backend has real DB models: Patient, Vital, Alert, Nurse, Ward, AuditLog
+Backend API endpoints exist: /patients, /vitals, /alerts, /sbar/{id}, /analyze/{id}, /audit
+Backend has rule-based agents: trend detection, EWS scoring, threshold checks, escalation logic
+The foundation architecture is correct: React + FastAPI + PostgreSQL is the right stack
+3. What the Project Must Do (From the PDF)
+Core system — 15 agents
+#
+Agent
+What it does
+Built?
+1
+Vital Ingestion Agent
+Reads vitals entered by nurse each shift (morning/evening/night)
+Partial
+2
+Missing Vitals Agent
+Reminds nurse if vitals not entered for a shift
+No
+3
+Validation Agent
+Catches impossible values like BP 800/60 or duplicate copy-paste
+No
+4
+Patient Context Agent
+Pulls patient diagnosis, age, ward, risk factors for rule context
+Partial
+5
+Clinical Rule Engine
+Runs threshold + trend + persistent rules
+Partial (backend only)
+6
+EWS Agent
+NEWS2-style early warning score from BP/HR/RR/SpO2/temp/consciousness
+Partial (backend only)
+7
+Trend Reasoning Agent
+Detects worsening across last 3 shifts specifically
+Partial (backend only)
+8
+Risk Classification Agent
+Assigns Green/Yellow/Orange/Red based on EWS + trends
+Partial (backend only)
+9
+LLM Summary Agent
+Calls Gemini API to write plain-English SBAR note
+No — template only
+10
+Escalation Agent
+Sends alert to right role based on severity
+Logic exists, not wired
+11
+Closure Agent
+Checks if action taken, loops back to escalate if not in 15-30 min
+No
+12
+Handover Agent
+Generates SBAR for all patients at shift change
+No
+13
+Audit Agent
+Logs every alert, action, delay, escalation with timestamps
+Backend only, no UI
+14
+Quality Agent
+Ward-level safety reports, avg response time, false positive rate
+No
+15
+Learning Agent
+Suggests rule tuning based on false positives (human approval needed)
+No
+3 Dashboard screens needed
+Screen
+What it shows
+Built?
+Ward View
+All beds, risk color, main issue, last action, time pending since alert
+Mock data only
+Patient View
+14-day vital trend charts, alert history, AI summary, nurse action log
+Mock data only
+Command Centre
+Total red alerts, unacknowledged count, ward heatmap, avg response time
+Mock data only
+4. The 4 Innovations (What Makes This Publishable)
+These innovations are NOT in standard EWS systems. They are your original contribution and make this project research-grade.
+Innovation 1 — Predictive Deterioration
+Standard systems only detect current problems. We predict WHEN a patient will cross a danger threshold if the trend continues.
+Take last 3 shift readings for any vital sign
+Fit a linear trend using NumPy (5 lines of code)
+Output: 'At current rate, SBP will cross 180 in approximately 1-2 more shifts'
+Backend file: backend/app/innovations/predictor.py
+Frontend: New card on patient page showing predicted trend with a simple arrow chart
+Innovation 2 — RAG Clinical Assistant
+Nurses can ask questions about a specific patient and get answers from that patient's own data only.
+Nurse types: 'Why is Bed 1204 flagged orange?' or 'What should I watch tonight?'
+System retrieves full vital history + alert log for that patient
+Gemini API answers using ONLY that patient's data — no hallucination possible
+Reuses our existing RAG chatbot code (Gemini + context injection)
+Backend file: backend/app/innovations/rag_assistant.py
+Frontend: Chat box panel on patient detail page
+Innovation 3 — Explainability Panel
+Every alert shows EXACTLY which rules fired — not just a color badge.
+Example output:
+Orange Alert triggered because:
+  -> SBP rose 142->158->176 (+10% per shift)  [Trend Rule]
+  -> Glucose above 180 for 3 shifts            [Persistent Rule]
+  -> Patient is diabetic + post-op Day 2       [Risk Factor]
+Connects to our Grad-CAM explainability research background
+Backend: rule_engine returns which rules fired as a list
+Frontend: Expandable 'Why was this triggered?' section on every alert card
+Innovation 4 — Multilingual SBAR
+Generate shift handover summaries in Tamil, Hindi, or English based on nurse preference.
+Gemini generates SBAR in English first
+Pass through Bhashini API for translation (used in our hackathon project already)
+Nurse selects preferred language in SBAR page
+Directly addresses India-specific gap — no existing EWS system does this
+Backend file: backend/app/innovations/multilingual.py
+Frontend: Language toggle buttons on SBAR page (English / Tamil / Hindi)
+5. Tech Stack
+Layer
+Tool
+Where it runs
+Frontend (UI)
+React + TanStack Router + Tailwind + Vite
+Cloudflare Pages (auto-deploys on git push)
+Backend (API + agents)
+Python + FastAPI
+Railway (auto-deploys on git push)
+Database
+PostgreSQL
+Railway (hosted)
+LLM for SBAR + RAG
+Gemini API (google-generativeai)
+Called from backend
+Translation
+Bhashini API
+Called from backend
+ORM
+SQLAlchemy
+Inside backend
+Frontend tool used
+Lovable.dev AI (like v0 from Vercel)
+Used to generate UI — edit code on GitHub directly
+Lovable is frontend only. Never try to add backend code in Lovable. Edit backend files directly on GitHub or locally, Railway auto-deploys.
+6. Full File Structure
+Frontend (React — edit via GitHub or Lovable)
+src/
+  lib/
+    api.ts           <- ALL backend API calls go here (needs to be created)
+    auth.ts          <- session management (currently uses localStorage only)
+  routes/
+    nurse.patients.tsx          <- My patients list (currently MOCK data)
+    nurse.patient.$id.tsx       <- Single patient detail (currently MOCK data)
+    nurse.vitals.$id.tsx        <- Vitals entry form (currently does NOT save)
+    nurse.sbar.$id.tsx          <- SBAR view (currently hardcoded template)
+    admin.index.tsx             <- Admin dashboard (currently MOCK data)
+    admin.alerts.tsx            <- Alerts page (currently MOCK data)
+    admin.nurses.tsx            <- Nurses management (currently MOCK data)
+    admin.wards.tsx             <- Wards view (currently MOCK data)
+  data/
+    hospital.ts      <- FAKE mock data file — to be REPLACED by real API calls
+  components/
+    brand/Logo.tsx   <- Logo component (image file is missing, needs fix)
+Backend (Python/FastAPI — edit via GitHub, Railway deploys)
+backend/app/
+  main.py          <- FastAPI app entrypoint
+  models.py        <- DB tables: Patient, Vital, Alert, Nurse, Ward, AuditLog
+  schemas.py       <- request/response validation
+  routes.py        <- all API endpoints
+  agents.py        <- trend detection, EWS, SBAR generator, escalation logic
+  seed.py          <- populates DB with sample data (needs expansion to 50 patients)
+  database.py      <- DB connection
+  innovations/     <- CREATE THIS FOLDER
+    predictor.py         <- Innovation 1
+    rag_assistant.py     <- Innovation 2
+    explainability.py    <- Innovation 3
+    multilingual.py      <- Innovation 4
+7. Exact Build Order — Do NOT Skip Steps
+Steps 1 and 2 can happen in parallel (you and Teammate 3 start at same time). Everything else is sequential.
+Step
+What
+Who
+Can start when?
+1
+Fix backend: add Gemini SBAR + 4 innovations to agents.py
+Madan
+RIGHT NOW
+2
+Seed real data: 50 patients x 14 days x 3 shifts in seed.py
+Teammate 3
+RIGHT NOW
+3a
+Create src/lib/api.ts with all backend API call functions
+Madan
+After Step 1
+3b
+Fix nurse pages: patients, patient detail, vitals form, SBAR
+Madan
+After Step 3a
+3c
+Fix admin pages: dashboard, alerts, nurses, wards
+Anna
+After Step 3a
+3d
+Fix admin login to call real backend instead of hardcoded
+Anna
+After Step 3a
+3e
+Fix logo: add actual PNG to src/assets/
+Anna
+RIGHT NOW (easy)
+4
+Add innovation UI panels to patient page and SBAR page
+Madan
+After Steps 1 + 3b
+5
+Wire escalation: actually send notifications when alert fires
+Teammate 3
+After Step 1
+6
+Add Audit Log UI page (backend exists, just need frontend page)
+Teammate 3
+After Step 3a
+7
+Security: JWT login, bcrypt passwords, restrict CORS
+Anna
+Last — after everything works
+8. What Madan Does First — Step by Step
+Start here. Do these in order. Ask Claude to help with each one individually.
+Step 1A — Clone the repo and set up locally
+git clone https://github.com/annamath444/nirikshamrita-heartbeat.git
+cd nirikshamrita-heartbeat
+cd backend/app
+python -m venv venv
+venv\Scripts\activate    <- Windows
+source venv/bin/activate  <- Mac/Linux
+pip install -r requirements.txt
+Create a .env file inside backend/app/ with:
+DATABASE_URL=<ask Anna for the Railway Postgres public URL>
+GEMINI_API_KEY=<your Gemini API key from Google AI Studio>
+Step 1B — Add Gemini SBAR to agents.py
+Open backend/app/agents.py. Find the SBAR generator function. Replace the template string with a Gemini API call. Ask Claude: 'Help me replace the template SBAR in agents.py with a real Gemini API call. Here is the current function: [paste the function]'
+Step 1C — Add predictor.py (Innovation 1)
+Create backend/app/innovations/predictor.py. Ask Claude: 'Write a Python function that takes a list of 3 vital readings across shifts and predicts when it will cross a danger threshold using linear regression.'
+Step 1D — Add rag_assistant.py (Innovation 2)
+Create backend/app/innovations/rag_assistant.py. Ask Claude: 'Write a function that takes a nurse's question and a patient's full vital history, and calls Gemini API to answer the question using only that patient's data.'
+Step 1E — Add explainability.py (Innovation 3)
+Create backend/app/innovations/explainability.py. Ask Claude: 'Write a function that takes the rule engine output and returns a list of plain-English bullet points explaining which rules triggered the alert and why.'
+Step 1F — Add multilingual.py (Innovation 4)
+Create backend/app/innovations/multilingual.py. Ask Claude: 'Write a function that takes an SBAR text in English and calls the Bhashini API to translate it to Tamil or Hindi based on a language parameter.'
+Step 1G — Push to GitHub
+git add .
+git commit -m 'Add Gemini SBAR and 4 innovations to backend'
+git push
+Railway will auto-deploy within 2 minutes. Check /docs endpoint to confirm new endpoints appear.
+9. What Anna Does
+Task 1 — Fix the logo (do this today, 5 minutes)
+Download the logofinal.png file from the WhatsApp/shared folder
+Add it to src/assets/logo.png in the GitHub repo
+In src/components/brand/Logo.tsx, import it: import logoImg from '@/assets/logo.png'
+Replace whatever the current image source is with logoImg
+Task 2 — Fix admin login
+In src/components/auth/LoginForm.tsx, the admin login currently just navigates without checking anything. Replace the admin block with a real fetch call to the backend /login endpoint.
+Ask Claude: 'In this LoginForm.tsx, fix the admin login to call the backend API instead of just navigating. Here is the current code: [paste onSubmit function]'
+Task 3 — Fix admin pages (after Madan creates api.ts in Step 3a)
+Every admin page imports from '@/data/hospital'. Replace those imports with api calls from '@/lib/api'. Pages to fix: admin.index.tsx, admin.alerts.tsx, admin.nurses.tsx, admin.wards.tsx
+10. What Teammate 3 Does
+Task 1 — Expand seed data (do this today)
+Open backend/app/seed.py. Rewrite it to generate:
+50 patients with realistic Indian names, diagnosis, ward, age, gender
+14 days x 3 shifts of vitals per patient (42 readings per patient = 2100 total readings)
+At least 10 patients should show clear worsening trends for demo
+At least 3 patients should have orange/red alerts active
+Ask Claude: 'Write a Python seed.py for a hospital app that generates 50 patients x 14 days x 3 shifts of realistic vitals with some showing deterioration trends. Use SQLAlchemy models: [paste models.py]'
+Task 2 — Wire up escalation notifications
+In backend/app/agents.py, find the escalation agent function. It currently decides WHO to notify but doesn't actually notify anyone. Add a simple print/log statement first, then optionally add email/webhook notification.
+Task 3 — Add Audit Log frontend page
+Create src/routes/admin.audit.tsx. It should call GET /audit from the backend and display a table of every logged event with timestamp, event type, patient, and action taken.
+11. Alarm Logic Reference (for Building Rule Engine)
+Threshold Rules
+Vital
+Danger Value
+Severity
+Systolic BP
+> 180 or < 90
+Red
+Blood Glucose
+> 300 or < 70
+Red
+Heart Rate
+> 120 or < 50
+Yellow/Red
+SpO2
+< 92%
+Red
+Respiratory Rate
+> 24 or < 8
+Yellow/Red
+Temperature
+> 38.5C or < 35C
+Yellow/Red
+Pain Score
+>= 7 or sudden increase
+Yellow
+Trend Rules (across shifts)
+Vital
+Rule
+Example
+Systolic BP
+Rise or drop > 10% across 2+ shifts
+142 -> 158 -> 176
+Blood Glucose
+Rise > 20 mg/dL across 2+ shifts
+160 -> 190 -> 225
+Heart Rate
+Persistent increase across 3 shifts
+88 -> 105 -> 118
+SpO2
+Falling across shifts
+97% -> 94% -> 92%
+Temperature
+Increasing trend across shifts
+37.5 -> 38.1 -> 38.7
+Pain
+Increasing despite medication
+3 -> 6 -> 8
+Escalation Timing
+Severity
+Who notified
+If no action
+Green
+Dashboard only
+Nothing
+Yellow
+Assigned nurse
+15 min -> supervisor
+Orange
+Nurse + supervisor + duty doctor
+30 min -> senior doctor
+Red
+Nurse + doctor + rapid response team
+Continuous escalation
+12. How to Use This Document in a New Chat
+When Claude's context runs out, start a new chat. Paste this entire document and say: 'I am Madan, B.Tech AI student at Amrita Vishwa Vidyapeetham. I am building NirikshAmrita hospital monitoring system. Here is the full project context. Help me with [specific task].'
+What to ask for specifically — copy these prompts
+To fix the vitals form:
+'Help me fix nurse.vitals.$patientId.tsx to actually POST vitals data to the backend API. The backend endpoint is POST /vitals at https://calm-motivation-production-c24c.up.railway.app. Here is the current form code: [paste]'
+To add Gemini SBAR:
+'Help me replace the template SBAR generator in agents.py with a real Gemini API call using google-generativeai. The function receives patient data and last 3 shift vitals. Here is the current function: [paste]'
+To add Innovation 1 (Prediction):
+'Write a Python function predict_deterioration(vitals_list, threshold) that takes a list of 3 readings and predicts when it will cross the threshold using numpy linear regression. Return estimated shifts remaining and predicted value.'
+To add Innovation 2 (RAG):
+'Write a Python function rag_answer(question, patient_dict, vitals_history) that calls Gemini API and answers the nurse question using ONLY the provided patient data. Make sure it cannot make up diagnoses or treatments.'
+To fix admin dashboard:
+'Help me replace the mock data imports in admin.index.tsx with real API calls to the backend. The api.ts file has these functions: [paste api.ts]. Here is the current admin.index.tsx: [paste]'
+NirikshAmrita  |  Master Project Document  |  June 2026
+Built at Amrita Vishwa Vidyapeetham, Faridabad  |  B.Tech AI & Data Science
