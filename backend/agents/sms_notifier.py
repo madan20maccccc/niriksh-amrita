@@ -80,11 +80,11 @@ def _send_via_twilio(to_phone: str, message: str) -> dict:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             if response.status == 201 or res_json.get("sid"):
-                print(f"[SMS] ✅ Alert sent via Twilio: {res_json.get('sid')}")
+                print(f"[SMS] SUCCESS: Alert sent via Twilio: {res_json.get('sid')}")
                 return {"success": True, "message": "SMS alert sent via Twilio!"}
             return {"success": False, "message": f"Twilio returned status {response.status}"}
     except Exception as e:
-        print(f"[SMS] ❌ Twilio failed: {e}")
+        print(f"[SMS] ERROR: Twilio failed: {e}")
         return {"success": False, "message": f"Twilio error: {str(e)}"}
 
 
@@ -108,12 +108,13 @@ def _send_via_textbelt(to_phone: str, message: str) -> dict:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             if res_json.get("success"):
-                print(f"[SMS] ✅ SMS sent via Textbelt: quota remaining {res_json.get('quotaRemaining')}")
+                print(f"[SMS] SUCCESS: SMS sent via Textbelt: quota remaining {res_json.get('quotaRemaining')}")
                 return {"success": True, "message": f"SMS sent via Textbelt! (Remaining quota: {res_json.get('quotaRemaining')})"}
             else:
                 err_msg = res_json.get("error", "Quota exceeded or daily limit hit.")
-                print(f"[SMS] ⚠️ Textbelt rejected: {err_msg}")
+                print(f"[SMS] WARNING: Textbelt rejected: {err_msg}")
                 return {"success": False, "message": err_msg}
     except Exception as e:
-        print(f"[SMS] ❌ Textbelt connection failed: {e}")
+        print(f"[SMS] ERROR: Textbelt connection failed: {e}")
         return {"success": False, "message": f"SMS connection failed: {str(e)}"}
+

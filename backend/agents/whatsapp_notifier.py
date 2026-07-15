@@ -71,17 +71,18 @@ def send_whatsapp_alert(
         with urllib.request.urlopen(req, timeout=10) as response:
             body = response.read().decode("utf-8", errors="ignore")
             if response.status == 200 and "Message queued" in body:
-                print(f"[WhatsApp] ✅ Alert sent to +{WHATSAPP_PHONE}: {patient_name} NEWS2={news2_score}")
+                print(f"[WhatsApp] SUCCESS: Alert sent to +{WHATSAPP_PHONE}: {patient_name} NEWS2={news2_score}")
                 return {"success": True, "message": "WhatsApp alert sent successfully"}
             else:
-                print(f"[WhatsApp] ⚠️ Unexpected response: {body[:200]}")
+                print(f"[WhatsApp] WARNING: Unexpected response: {body[:200]}")
                 return {"success": False, "message": f"Unexpected response: {body[:100]}"}
     except urllib.error.URLError as e:
-        print(f"[WhatsApp] ❌ Network error: {e}")
+        print(f"[WhatsApp] ERROR: Network error: {e}")
         return {"success": False, "message": f"Network error: {str(e)}"}
     except Exception as e:
-        print(f"[WhatsApp] ❌ Error: {e}")
+        print(f"[WhatsApp] ERROR: {e}")
         return {"success": False, "message": str(e)}
+
 
 
 def send_test_message(phone: str, apikey: str) -> dict:
