@@ -6,7 +6,7 @@ import {
   Smartphone, Send, Settings, Info, ChevronRight, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getBaseUrl, testWhatsApp, saveWhatsAppConfig, getWhatsAppConfig, testSMS, saveSMSConfig, getSMSConfig } from "@/lib/api";
+import { getBaseUrl, testWhatsApp, saveWhatsAppConfig, getWhatsAppConfig, testSMS, saveSMSConfig, getSMSConfig, getTelegramConfig, saveTelegramConfig, testTelegram, discoverTelegramChats } from "@/lib/api";
 
 export const Route = createFileRoute("/admin/settings")({ component: SettingsPage });
 
@@ -30,6 +30,15 @@ function SettingsPage() {
   const [smsStatus, setSmsStatus] = useState<"idle"|"ok"|"fail">("idle");
   const [smsConfigured, setSmsConfigured] = useState(false);
 
+  // Telegram Config (FREE & UNLIMITED)
+  const [tgToken, setTgToken] = useState("");
+  const [tgChatIds, setTgChatIds] = useState("");
+  const [tgSaving, setTgSaving] = useState(false);
+  const [tgTesting, setTgTesting] = useState(false);
+  const [tgStatus, setTgStatus] = useState<"idle"|"ok"|"fail">("idle");
+  const [tgConfigured, setTgConfigured] = useState(false);
+  const [tgDiscovering, setTgDiscovering] = useState(false);
+
   // Gemini Key
   const [geminiKey,    setGeminiKey]    = useState("");
   const [geminiSaving, setGeminiSaving] = useState(false);
@@ -39,13 +48,15 @@ function SettingsPage() {
   const [backendSaving, setBackendSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([getWhatsAppConfig(), getSMSConfig()])
-      .then(([wCfg, sCfg]) => {
+    Promise.all([getWhatsAppConfig(), getSMSConfig(), getTelegramConfig()])
+      .then(([wCfg, sCfg, tCfg]) => {
         setWpConfigured(wCfg.configured);
         setSmsConfigured(sCfg.configured);
+        setTgConfigured(tCfg.configured);
       })
       .catch(() => {});
   }, []);
+
 
 
   const handleSaveWhatsApp = async () => {
@@ -118,6 +129,72 @@ function SettingsPage() {
       setSmsTesting(false);
     }
   };
+
+  const handleSaveTelegram = async () => {
+    if (!tgToken || !tgChatIds) {
+      toast.error("Both Bot Token and Chat IDs are required.");
+      return;
+    }
+    setTgSaving(true);
+    try {
+      await saveTelegramConfig(tgToken, tgChatIds);
+      setTgConfigured(true);
+      toast.success("Telegram Bot configuration saved successfully!");
+    } catch (e: any) {
+      toast.error("Failed to save Telegram config: " + e.message);
+    } finally {
+      setTgSaving(false);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    if (!tgChatIds) {
+      toast.error("Please enter a Chat ID to send the test alert to.");
+      return;
+    }
+    setTgTesting(true);
+    setTgStatus("idle");
+    try {
+      // Use first chat ID for the test
+      const primaryChatId = tgChatIds.split(",")[0].trim();
+      const res = await testTelegram(primaryChatId, tgToken);
+      if (res.success) {
+        setTgStatus("ok");
+        toast.success("Test message sent! Check your Telegram chat.");
+      } else {
+        setTgStatus("fail");
+        toast.error("Failed: " + res.message);
+      }
+    } catch (e: any) {
+      setTgStatus("fail");
+      toast.error(e.message || "Failed to send Telegram test message");
+    } finally {
+      setTgTesting(false);
+    }
+  };
+
+  const handleDiscoverChats = async () => {
+    if (!tgToken) {
+      toast.error("Please enter your Telegram Bot Token first to fetch updates.");
+      return;
+    }
+    setTgDiscovering(true);
+    try {
+      const res = await discoverTelegramChats(tgToken);
+      if (res.success && res.chat_ids && res.chat_ids.length > 0) {
+        const foundIds = res.chat_ids.join(", ");
+        setTgChatIds(foundIds);
+        toast.success(`Successfully discovered ${res.chat_ids.length} active Chat ID(s)! Saved into field.`);
+      } else {
+        toast.info(res.message || "No new users detected. Make sure you opened the bot and clicked 'START' first!");
+      }
+    } catch (e: any) {
+      toast.error("Failed to fetch Telegram updates: " + e.message);
+    } finally {
+      setTgDiscovering(false);
+    }
+  };
+
 
 
   const handleSaveGemini = async () => {
@@ -469,6 +546,112 @@ _— Amrita Hospital Surveillance System_`}</div>
               SMS alerts fire <strong>immediately</strong> on critical vitals AND <strong>every 15 minutes</strong> for all unacknowledged RED/ORANGE patients.
               Set doctor phone numbers in the <strong>Wards</strong> tab.
             </span>
+          </div>
+        </div>
+      </Section>
+
+      {/* ─── FREE & UNLIMITED TELEGRAM ALERTS ─────────────────── */}
+      <Section icon={<MessageCircle className="h-4.5 w-4.5" />} title="Free Telegram Bot Alerts" badge={tgConfigured ? "Active ✓" : "Setup Required"} badgeColor={tgConfigured ? "green" : "amber"}>
+        <div className="space-y-5">
+          {/* Guide */}
+          <div className="rounded-2xl bg-sky-50 border border-sky-200 p-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-sky-700 mt-0.5 shrink-0" />
+              <div className="text-sm text-sky-800 font-bold">
+                100% FREE FOREVER — Unlimited Clinical Alerts!
+              </div>
+            </div>
+            <p className="text-xs text-sky-700 pl-6 leading-relaxed">
+              No subscription, no paid keys, no daily limits! Alerts arrive instantly on the doctor's phone with sound and vibration.
+            </p>
+            <div className="pl-6 space-y-1.5">
+              {[
+                { step: "1", text: "Open Telegram, search for ", highlight: "@BotFather", subtext: " and send /newbot to create a bot. Copy the API Token." },
+                { step: "2", text: "Paste the Bot Token below." },
+                { step: "3", text: "Open your new bot link on your phone and click ", highlight: "START", subtext: " (essential to activate!)." },
+                { step: "4", text: "Click ", highlight: "Auto-Discover Chat IDs", subtext: " below to instantly find your doctor's Chat ID!" }
+              ].map(s => (
+                <div key={s.step} className="flex items-start gap-2 text-xs text-sky-800 font-medium">
+                  <span className="h-5 w-5 rounded-full flex items-center justify-center font-bold shrink-0 text-[10px] text-white"
+                    style={{ background: "oklch(0.55 0.16 240)" }}>{s.step}</span>
+                  <div>
+                    {s.text}
+                    {s.highlight && (
+                      <span className="font-bold text-sky-900 bg-sky-100 rounded px-1.5 py-0.5 font-mono ml-0.5">{s.highlight}</span>
+                    )}
+                    {s.subtext && <span className="text-sky-600 ml-0.5">{s.subtext}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Token & Chat IDs inputs */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Telegram Bot Token</label>
+              <input
+                type="text"
+                placeholder="123456:ABC-DEF..."
+                value={tgToken}
+                onChange={e => setTgToken(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+              <p className="text-[11px] text-slate-400">Example: 7123456789:AAH_abcdef...</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor Chat IDs (comma-separated)</label>
+              <input
+                type="text"
+                placeholder="e.g. 987654321"
+                value={tgChatIds}
+                onChange={e => setTgChatIds(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+              <p className="text-[11px] text-slate-400">Multiple chat IDs can be entered, separated by commas.</p>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2.5 pt-2">
+            <button
+              onClick={handleSaveTelegram}
+              disabled={tgSaving || !tgToken || !tgChatIds}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl disabled:opacity-50 hover:scale-[1.01] active:scale-[0.98] transition"
+              style={{ background: "linear-gradient(135deg, oklch(0.45 0.22 258), oklch(0.52 0.20 268))" }}
+            >
+              {tgSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Save Bot Config
+            </button>
+            
+            <button
+              onClick={handleDiscoverChats}
+              disabled={tgDiscovering || !tgToken}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl disabled:opacity-50 hover:bg-slate-200 transition"
+            >
+              {tgDiscovering ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Auto-Discover Chat IDs
+            </button>
+
+            <button
+              onClick={handleTestTelegram}
+              disabled={tgTesting || !tgChatIds || !tgToken}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-slate-900 rounded-xl disabled:opacity-50 hover:bg-slate-800 transition"
+            >
+              {tgTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send Test Telegram
+            </button>
+
+            {tgStatus === "ok" && (
+              <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" /> Sent!
+              </span>
+            )}
+            {tgStatus === "fail" && (
+              <span className="flex items-center gap-1.5 text-sm font-bold text-red-600">
+                <AlertTriangle className="h-4 w-4" /> Failed.
+              </span>
+            )}
           </div>
         </div>
       </Section>

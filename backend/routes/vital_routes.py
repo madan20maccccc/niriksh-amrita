@@ -19,6 +19,7 @@ from agents.llm_summary import generate_sbar_gemini
 from agents.audit import audit_vitals_entered, audit_alert_created, audit_sbar_generated
 from agents.whatsapp_notifier import send_whatsapp_alert
 from agents.sms_notifier import send_sms_alert
+from agents.telegram_notifier import send_telegram_alert
 
 router = APIRouter()
 
@@ -180,6 +181,17 @@ async def enter_vitals(
                 alert_msg,
                 ward.name if ward else "Unknown Ward",
             )
+
+        # ── Agent 17: FREE Telegram Alert ─────────────────────
+        background_tasks.add_task(
+            send_telegram_alert,
+            patient.full_name,
+            patient.bed_number,
+            ews_data["total_score"],
+            risk_level.value,
+            alert_msg,
+            ward.name if ward else "Unknown Ward",
+        )
 
     # ── Agent 12 (WebSocket): Broadcast to dashboard ─────────────
     alert_dicts = [

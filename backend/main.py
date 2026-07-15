@@ -49,9 +49,10 @@ def shift_handover_job():
         db.close()
 
 def sms_escalation_job():
-    """Every 15 minutes: send automatic SMS to ward doctors for all unacknowledged HIGH RISK patients."""
+    """Every 15 minutes: send automatic SMS & Telegram to ward doctors for all unacknowledged HIGH RISK patients."""
     from database import SessionLocal
     from agents.sms_notifier import send_sms_alert
+    from agents.telegram_notifier import send_telegram_alert
     import models as m
     
     db = SessionLocal()
@@ -69,8 +70,25 @@ def sms_escalation_job():
         if not active_alerts:
             return
 
-        print(f"[SMS Escalation] Found {len(active_alerts)} unacknowledged high-risk alerts. Sending SMS re-alerts...")
+        print(f"[Escalation Scheduler] Found {len(active_alerts)} unacknowledged high-risk alerts. Sending re-alerts...")
 
+        # ── Send Telegram Alerts (Free, unlimited) ──
+        for alert in active_alerts:
+            patient = db.query(m.Patient).filter(m.Patient.id == alert.patient_id).first()
+            if not patient:
+                continue
+            ward = db.query(m.Ward).filter(m.Ward.id == patient.ward_id).first()
+            
+            send_telegram_alert(
+                patient_name=patient.full_name,
+                bed_number=patient.bed_number,
+                news2_score=alert.news2_score or 0,
+                risk_level=alert.risk_level.value,
+                details=f"RE-ALERT: Patient remains unacknowledged. {alert.message}",
+                ward_name=ward.name if ward else "Unknown Ward"
+            )
+
+        # ── Send Carrier SMS Alerts ──
         sent_wards = set()
         for alert in active_alerts:
             patient = db.query(m.Patient).filter(m.Patient.id == alert.patient_id).first()
@@ -109,9 +127,10 @@ def sms_escalation_job():
             print(f"[SMS Escalation] Ward '{ward.name}' -> {ward.doctor_phone}: {result.get('message', '')}")
 
     except Exception as e:
-        print(f"[SMS Escalation] ERROR: {e}")
+        print(f"[Escalation Scheduler] ERROR: {e}")
     finally:
         db.close()
+
 
 
 # ─────────────────────────────────────────────

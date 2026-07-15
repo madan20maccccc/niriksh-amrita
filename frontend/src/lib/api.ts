@@ -362,3 +362,30 @@ export async function saveFast2SMSConfig(apiKey: string) {
 export async function getFast2SMSConfig() {
   return request("/alerts/sms/fast2sms/config");
 }
+
+// ─────────────────────────────────────────────
+// TELEGRAM CONFIG (Admin)
+// ─────────────────────────────────────────────
+export async function testTelegram(chatId: string, botToken?: string) {
+  return request("/alerts/telegram/test", {
+    method: "POST",
+    body: JSON.stringify({ chat_id: chatId, bot_token: botToken }),
+  });
+}
+
+export async function saveTelegramConfig(botToken: string, chatIds: string) {
+  return request("/alerts/telegram/save-config", {
+    method: "POST",
+    body: JSON.stringify({ bot_token: botToken, chat_ids: chatIds }),
+  });
+}
+
+export async function getTelegramConfig() {
+  return request("/alerts/telegram/config");
+}
+
+export async function discoverTelegramChats(token?: string) {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  return request(`/alerts/telegram/discover-chats${query}`);
+}
+

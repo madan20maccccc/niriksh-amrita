@@ -9,9 +9,19 @@ from agents.closure import acknowledge_alert
 from agents.audit import audit_alert_acknowledged
 from agents.whatsapp_notifier import send_test_message
 from agents.sms_notifier import send_sms_alert
+from agents.telegram_notifier import send_telegram_alert, send_test_telegram, get_bot_updates
 from websocket_manager import manager
 
 router = APIRouter()
+
+class TelegramConfig(BaseModel):
+    bot_token: str
+    chat_ids: str
+
+class TelegramTestRequest(BaseModel):
+    chat_id: str
+    bot_token: Optional[str] = ""
+
 
 
 class SMSConfig(BaseModel):
@@ -337,3 +347,76 @@ def get_fast2sms_config(current_user: models.User = Depends(get_current_user)):
         "configured": bool(key),
         "api_key": key[:6] + "****" if len(key) > 6 else "",
     }
+
+
+# ─── TELEGRAM BOT ALERTS (FREE & UNLIMITED) ───────────────────────────
+
+@router.post("/telegram/save-config")
+def save_telegram_config(
+    cfg: TelegramConfig,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Save Telegram Bot Token and Chat IDs to .env file."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    lines = [l for l in lines if not l.startswith("TELEGRAM_BOT_TOKEN=") and not l.startswith("TELEGRAM_CHAT_IDS=")]
+    lines.append(f"TELEGRAM_BOT_TOKEN={cfg.bot_token}\n")
+    lines.append(f"TELEGRAM_CHAT_IDS={cfg.chat_ids}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    import agents.telegram_notifier as tn
+    tn.TELEGRAM_BOT_TOKEN = cfg.bot_token
+    tn.TELEGRAM_CHAT_IDS = cfg.chat_ids
+    os.environ["TELEGRAM_BOT_TOKEN"] = cfg.bot_token
+    os.environ["TELEGRAM_CHAT_IDS"] = cfg.chat_ids
+
+    return {"success": True, "message": "Telegram Bot Configuration saved successfully."}
+
+
+@router.post("/telegram/test")
+def test_telegram(
+    req: TelegramTestRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Send a test message to a Telegram chat ID."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    result = send_test_telegram(token=req.bot_token, chat_id=req.chat_id)
+    return result
+
+
+@router.get("/telegram/config")
+def get_telegram_config(current_user: models.User = Depends(get_current_user)):
+    """Get current Telegram Bot configuration status."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    chat_ids = os.getenv("TELEGRAM_CHAT_IDS", "")
+    return {
+        "configured": bool(token and chat_ids),
+        "bot_token": token[:6] + "****" if len(token) > 6 else "",
+        "chat_ids": chat_ids,
+    }
+
+
+@router.get("/telegram/discover-chats")
+def discover_telegram_chats(
+    token: Optional[str] = "",
+    current_user: models.User = Depends(get_current_user)
+):
+    """Call Telegram getUpdates to automatically find active chat IDs."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    return get_bot_updates(token)
+
