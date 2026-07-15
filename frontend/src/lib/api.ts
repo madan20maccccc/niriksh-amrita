@@ -22,8 +22,6 @@ export function getWsUrl(path: string) {
 
 function getHeaders() {
   const session = getSession();
-  // Get token if stored, or check if we stored token elsewhere
-  // Let's store token in localStorage 'nirikshamrita.token'
   const token = localStorage.getItem("nirikshamrita.token") || "";
   return {
     "Content-Type": "application/json",
@@ -109,6 +107,32 @@ export async function enterVitals(vitals: VitalsInput) {
 
 export async function getVitalsHistory(patientId: number, limit = 15) {
   return request(`/vitals/patient/${patientId}?limit=${limit}`);
+}
+
+// Real-Time Gemini Vision OCR Vital Uploader
+export async function uploadVitalsOcr(file: File) {
+  const url = `${getBaseUrl()}/vitals/ocr`;
+  const token = localStorage.getItem("nirikshamrita.token") || "";
+  
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": token ? `Bearer ${token}` : "",
+      "Bypass-Tunnel-Reminder": "true",
+    },
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: "OCR parsing failed" }));
+    throw new Error(err.detail || "OCR parsing failed");
+  }
+
+  return response.json();
 }
 
 // ─────────────────────────────────────────────

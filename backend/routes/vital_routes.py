@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
+import os
+import json
 from database import get_db
 import models, schemas
 from auth import get_current_user
@@ -15,9 +17,10 @@ from agents.risk_classifier import classify_risk
 from agents.escalation import run_escalation
 from agents.llm_summary import generate_sbar_gemini
 from agents.audit import audit_vitals_entered, audit_alert_created, audit_sbar_generated
-import json
 
 router = APIRouter()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 
 @router.post("/", response_model=schemas.VitalOut)
@@ -255,3 +258,71 @@ def get_ews(
     if not ews:
         raise HTTPException(status_code=404, detail="EWS score not found for this vital")
     return schemas.EWSScoreOut.model_validate(ews)
+
+
+@router.post("/ocr")
+async def extract_vitals_ocr(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Real-time AI vital monitor OCR screen parser using Gemini 1.5 Flash Vision.
+    Extracts parameters directly from bedside screen images.
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API Key is not configured in backend.")
+        
+    try:
+        import google.generativeai as genai
+        
+        image_bytes = await file.read()
+        
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        image_part = {
+            "mime_type": file.content_type or "image/jpeg",
+            "data": image_bytes
+        }
+        
+        prompt = """
+        You are a highly accurate clinical OCR agent for hospital ICU and ward vital monitors.
+        Analyze this vital monitor screen image and extract the numerical values for:
+        1. Systolic Blood Pressure (systolic_bp)
+        2. Diastolic Blood Pressure (diastolic_bp)
+        3. Heart Rate / Pulse (heart_rate)
+        4. Oxygen Saturation (spo2)
+        5. Respiratory Rate (respiratory_rate)
+        6. Temperature in Celsius (temperature)
+
+        Please look at the labels (e.g. SpO2, HR, PR, NIBP, TEMP, RR) and extract the corresponding main numbers.
+        If the temperature is in Fahrenheit (e.g. 98.6), convert it to Celsius (37.0).
+
+        Return ONLY a raw valid JSON object with the following fields:
+        {
+          "systolic_bp": number or null,
+          "diastolic_bp": number or null,
+          "heart_rate": number or null,
+          "spo2": number or null,
+          "respiratory_rate": number or null,
+          "temperature": number or null
+        }
+        Do not output any markdown formatting, code blocks (like ```json), or explanatory text. Just raw JSON.
+        """
+        
+        # Using supported generative flash model
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content([prompt, image_part])
+        text = response.text.strip()
+        
+        # Clean up markdown response formatting if present
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        text = text.strip()
+        
+        parsed = json.loads(text)
+        return parsed
+    except Exception as e:
+        print(f"[OCR Backend Error] {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse monitor image: {str(e)}")

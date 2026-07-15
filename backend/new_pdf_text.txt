@@ -1,0 +1,904 @@
+
+--- PAGE 0 ---
+NurseWatch-AI:  Agentic  Shift  Safety  and  Early  
+Warning
+ 
+System
+ 
+1.  Core  Problem  
+In  hospitals,  patients  often  deteriorate  gradually.  A  single  BP,  sugar,  heart  rate,  SpO ₂ ,  or  
+respiratory-rate
+ 
+value
+ 
+may
+ 
+not
+ 
+look
+ 
+dramatic,
+ 
+but
+ 
+the
+ 
+trend
+ 
+across
+ 
+shifts
+ 
+may
+ 
+show
+ 
+a
+ 
+clear
+ 
+worsening
+ 
+pattern.
+ 
+The
+ 
+risk
+ 
+is
+ 
+highest
+ 
+during
+ 
+shift
+ 
+changes
+ 
+because
+ 
+information
+ 
+may
+ 
+be
+ 
+fragmented,
+ 
+missed,
+ 
+or
+ 
+poorly
+ 
+handed
+ 
+over.
+ 
+So  the  goal  should  not  be  only  a  dashboard.  The  system  should  act  like  an  agentic  clinical  
+safety
+ 
+workflow
+ 
+that
+ 
+continuously
+ 
+asks:
+ 
+“Is  this  patient  becoming  worse  across  shifts,  and  has  the  right  person  
+acknowledged
+ 
+and
+ 
+acted
+ 
+on
+ 
+it?”
+ 
+This  aligns  with  patient-safety  thinking.  WHO’s  Global  Patient  Safety  Action  Plan  2021–2030  
+focuses
+ 
+on
+ 
+reducing
+ 
+avoidable
+ 
+harm
+ 
+in
+ 
+healthcare,
+ 
+and
+ 
+early-warning
+ 
+systems
+ 
+are
+ 
+designed
+ 
+to
+ 
+detect
+ 
+deterioration
+ 
+and
+ 
+trigger
+ 
+timely
+ 
+response.
+ 
+ 
+ 
+2.  System  Objective  
+To  build  an  agentic  AI  and  autonomous  workflow  system  that  monitors  patient  vitals  across  
+nursing
+ 
+shifts,
+ 
+detects
+ 
+absolute
+ 
+danger
+ 
+values
+ 
+and
+ 
+hidden
+ 
+worsening
+ 
+trends,
+ 
+generates
+ 
+structured
+ 
+handover
+ 
+summaries,
+ 
+escalates
+ 
+unacknowledged
+ 
+alerts,
+ 
+and
+ 
+maintains
+ 
+an
+ 
+audit
+ 
+trail
+ 
+of
+ 
+all
+ 
+nurse
+ 
+and
+ 
+clinician
+ 
+actions.
+ 
+The  system  should  support  decision-making  but  not  replace  clinical  judgment.  
+Clinical  disclaimer:  
+For
+ 
+nursing
+ 
+decision
+ 
+support
+ 
+only.
+ 
+All
+ 
+abnormal
+ 
+trends
+ 
+must
+ 
+be
+ 
+verified
+ 
+by
+ 
+a
+ 
+nurse/doctor.
+ 
+The
+ 
+AI
+ 
+should
+ 
+not
+ 
+independently
+ 
+diagnose,
+ 
+prescribe,
+ 
+or
+ 
+change
+ 
+treatment.
+ 
+ 
+3.  Why  Agentic  AI  Is  Needed  
+A  normal  dashboard  only  shows  information.  An  agentic  system  takes  responsibility  for  
+workflow
+ 
+completion.
+ 
+--- PAGE 1 ---
+Normal  dashboard  Agentic  AI  workflow  
+Shows  vitals  Watches  vitals  continuously  
+Displays  red  values  Detects  trends  across  shifts  
+Depends  on  nurse  noticing  
+Pushes  alert  to  responsible  nurse  
+No  follow-up  Checks  if  alert  was  acknowledged  
+No  escalation  Escalates  if  no  action  is  recorded  
+Manual  handover  Auto-generates  SBAR  handover  
+Poor  accountability  Creates  audit  log  
+Single-patient  view  Ward-level  risk  prioritization  
+NHS  guidance  on  acute  deterioration  emphasizes  clear  escalation  processes:  who  to  escalate  
+to,
+ 
+expected
+ 
+response,
+ 
+expected
+ 
+timeframes,
+ 
+and
+ 
+mechanisms
+ 
+for
+ 
+re-escalation
+ 
+or
+ 
+de-escalation
+ 
+as
+ 
+the
+ 
+patient
+ 
+worsens
+ 
+or
+ 
+improves.
+ 
+ 
+4.  Overall  Architecture  
+A.  Data  Sources  
+Data  source  Description  
+Bedside  monitor  HR,  SpO ₂ ,  respiratory  rate,  temperature  
+Manual  nursing  entries  BP,  glucose,  pain  score,  urine  output,  GCS  if  added  
+HIS  /  EMR  diagnosis,  ward,  bed,  doctor,  nursing  shift,  medication  orders  
+Lab  system  Hb,  WBC,  creatinine,  electrolytes,  lactate  if  available  
+Medication  system  insulin,  antihypertensives,  antibiotics,  oxygen  therapy  
+Nurse  action  log  rechecked  vitals,  informed  doctor,  medication  given,  patient  shifted  
+--- PAGE 2 ---
+Mock  data  generator  initial  prototype:  50  patients  ×  14  days  ×  3  shifts  
+B.  Core  Modules  
+Module  Function  
+Vital  ingestion  agent  Collects  vitals  from  devices  or  manual  entries  
+Patient  context  agent  Pulls  diagnosis,  age,  risk  category,  ward,  doctor  
+Rule  engine  agent  Applies  absolute  threshold,  trend,  persistent  abnormality  rules  
+Early-warning  score  agent  
+Calculates  NEWS2-like  score  or  hospital-approved  EWS  
+Trend  reasoning  agent  Detects  worsening  across  shifts  
+Handover  agent  Generates  SBAR  summary  
+Escalation  agent  Sends  alert  to  nurse,  supervisor,  duty  doctor  
+Closure  agent  Checks  whether  action  was  taken  
+Audit  agent  Maintains  legal  and  quality  log  
+Quality  analytics  agent  Produces  ward-level  safety  reports  
+NEWS2  was  developed  to  improve  detection  and  response  to  clinical  deterioration  in  acutely  ill  
+patients,
+ 
+and
+ 
+such
+ 
+standard
+ 
+early-warning
+ 
+approaches
+ 
+can
+ 
+be
+ 
+adapted
+ 
+locally
+ 
+after
+ 
+clinical
+ 
+approval.
+ 
+ 
+ 
+ 
+ 
+--- PAGE 3 ---
+5.  Vital  Parameters  to  Track  
+Basic  prototype  vitals  
+Parameter  Example  danger  rule  
+Systolic  BP  >180  or  <90  
+Diastolic  BP  >110  or  very  low  with  symptoms  
+Blood  glucose  >300  or  <70  
+Heart  rate  >120  or  <50  
+Temperature  >38.5°C  or  <35°C  
+SpO ₂  <92%,  or  lower  threshold  for  COPD  if  doctor-approved  
+Respiratory  rate  
+>24  or  <8  
+Pain  score  ≥7  or  sudden  increase  
+Consciousness  confusion,  drowsiness,  reduced  response  
+Urine  output  low  output  over  shift,  if  available  
+Extended  hospital  version  
+Add:  
+●  oxygen  requirement;  ●  GCS  /  AVPU;  ●  urine  output;  ●  fall  risk;  ●  sepsis  risk;  ●  post-operative  bleeding  signs;  ●  lactate,  WBC,  creatinine;  ●  insulin  administration  and  hypoglycemia  events;  ●  vasopressor/oxygen  escalation  where  applicable.  
+ 
+--- PAGE 4 ---
+6.  Alarm  Logic  
+A.  Absolute  threshold  alerts  
+These  trigger  when  a  value  crosses  a  dangerous  limit.  
+Alert  Rule  Severity  
+Severe  hypertension  
+SBP  >180  Red  
+Hypotension  SBP  <90  Red  
+Hyperglycemia  Glucose  >300  Red  
+Hypoglycemia  Glucose  <70  Red  
+Tachycardia  HR  >120  Yellow/Red  depending  context  
+Bradycardia  HR  <50  Yellow/Red  depending  context  
+Low  oxygen  SpO ₂  <92  Red  
+High  respiratory  rate  RR  >24  Yellow/Red  
+High  fever  Temp  >38.5°C  Yellow/Red  
+B.  Trend  alerts  
+These  detect  deterioration  even  before  an  emergency  threshold  is  crossed.  
+Trend  Rule  Example  
+BP  worsening  Two  or  more  consecutive  shifts  with  >10%  SBP  rise/drop  
+130  →  146  →  164  
+Sugar  worsening  
+Two  or  more  consecutive  shifts  with  >20  mg/dL  rise  160  →  190  →  225  
+HR  worsening  Persistent  increase  over  3  shifts  88  →  105  →  118  
+SpO ₂  worsening  Fall  across  shifts  97  →  94  →  92  
+--- PAGE 5 ---
+Fever  trend  Increasing  temperature  37.5  →  38.1  →  38.7  
+Pain  trend  Pain  increasing  despite  medication  3  →  6  →  8  
+C.  Persistent  abnormality  alerts  
+These  catch  patients  who  are  “not  critical  yet”  but  remain  unsafe.  
+Persistent  condition  Rule  
+BP  persistently  high  Three  shifts  above  140/90  
+Glucose  persistently  high  Three  shifts  above  180  
+Fever  persists  Fever  across  2–3  shifts  
+SpO ₂  persistently  low  Repeated  values  below  ward  threshold  
+Pain  uncontrolled  Pain  ≥6  for  two  shifts   
+7.  Agentic  Workflow  
+Step  1:  Vital  capture  
+The  Vital  Ingestion  Agent  receives  or  asks  for  vital  entries  at  fixed  times:  
+●  Morning  shift  ●  Evening  shift  ●  Night  shift  
+If  vitals  are  missing,  the  system  sends  a  reminder  to  the  assigned  nurse.  
+Example:  
+“Vitals
+ 
+for
+ 
+Bed
+ 
+1204,
+ 
+Patient
+ 
+A,
+ 
+night
+ 
+shift
+ 
+not
+ 
+entered.
+ 
+Please
+ 
+update
+ 
+or
+ 
+mark
+ 
+reason.”
+ 
+ 
+Step  2:  Data  validation  
+--- PAGE 6 ---
+The  Validation  Agent  checks  for  impossible  or  suspicious  values.  
+Examples:  
+●  BP  800/60  →  likely  entry  error.  ●  SpO ₂  40  in  stable  patient  →  recheck  urgently.  ●  Glucose  35  →  urgent  recheck  and  hypoglycemia  protocol.  ●  Same  exact  vitals  repeated  across  many  shifts  →  possible  copy-forward  issue.  
+ 
+Step  3:  Rule-based  detection  
+The  Clinical  Rule  Agent  applies:  
+1.  absolute  threshold  rules;  2.  trend  rules;  3.  persistent  abnormality  rules;  4.  patient-specific  risk  rules.  
+Example:  
+Patient  with  diabetes  +  post-op  status  +  glucose  260  for  3  shifts  =  orange  alert,  
+even
+ 
+if
+ 
+not
+ 
+>300.
+ 
+ 
+Step  4:  Early-warning  scoring  
+The  EWS  Agent  calculates  a  hospital-approved  early  warning  score  using  respiratory  rate,  
+oxygen
+ 
+saturation,
+ 
+temperature,
+ 
+systolic
+ 
+BP,
+ 
+heart
+ 
+rate,
+ 
+consciousness,
+ 
+and
+ 
+oxygen
+ 
+support.
+ 
+This  should  be  approved  by  Amrita  clinicians.  It  can  be  based  on  NEWS2  principles  but  
+localized
+ 
+to
+ 
+hospital
+ 
+policy.
+ 
+ 
+Step  5:  Plain-English  summary  
+The  LLM  Summary  Agent  generates  a  short  handover  note.  
+Example:  
+--- PAGE 7 ---
+“Patient’s  systolic  BP  increased  from  142  to  158  to  176  over  three  shifts.  Glucose  
+remained
+ 
+above
+ 
+200
+ 
+for
+ 
+the
+ 
+last
+ 
+three
+ 
+readings.
+ 
+No
+ 
+nurse
+ 
+action
+ 
+recorded
+ 
+after
+ 
+the
+ 
+evening
+ 
+alert.
+ 
+Clinical
+ 
+review
+ 
+recommended.”
+ 
+The  LLM  should  only  summarize  retrieved  structured  data.  It  should  not  invent  diagnosis  or  
+treatment.
+ 
+ 
+Step  6:  Escalation  
+The  Escalation  Agent  sends  alert  to  the  correct  role.  
+Severity  
+Recipient  Expected  response  
+Green  Dashboard  only  Routine  monitoring  
+Yellow  Assigned  nurse  Acknowledge  and  recheck  
+Orange  Nurse  +  nursing  supervisor  +  duty  doctor  Review  within  defined  time  
+Red  Nurse  +  duty  doctor  +  rapid  response  /  ICU  team  
+Immediate  action  
+The  system  should  avoid  alarm  fatigue.  The  Joint  Commission  has  highlighted  medical-device  
+alarm
+ 
+safety
+ 
+as
+ 
+a
+ 
+major
+ 
+hospital
+ 
+safety
+ 
+issue;
+ 
+therefore
+ 
+alerts
+ 
+must
+ 
+be
+ 
+prioritized,
+ 
+actionable,
+ and  auditable,  not  just  noisy.  (Joint  Commission)  
+ 
+Step  7:  Closure  tracking  
+This  is  where  the  system  becomes  truly  agentic.  
+The  Closure  Agent  checks  whether  action  was  taken.  
+Possible  nurse  actions:  
+●  rechecked  vitals;  ●  informed  duty  doctor;  ●  doctor  reviewed;  ●  medicine  given  as  per  order;  ●  oxygen  started  as  per  order;  
+--- PAGE 8 ---
+●  sample  sent;  ●  patient  shifted;  ●  false  alert  /  measurement  error;  ●  patient  refused;  ●  other  note.  
+If  no  action  is  recorded  within  the  allowed  time,  escalation  continues.  
+Example:  
+“Orange  alert  for  Bed  1204  not  acknowledged  for  15  minutes.  Escalating  to  nursing  
+supervisor.”
+ 
+ 
+Step  8:  Shift  handover  
+At  shift  change,  the  Handover  Agent  generates  ward-wise  and  patient-wise  SBAR  summaries.  
+SBAR  structure  
+Section  Content  
+Situation  Current  alert  and  patient  condition  
+Background  Diagnosis,  age,  risk  factors  
+Assessment  Vitals  trend  and  risk  level  
+Recommendation  Recheck,  doctor  review,  monitor  closely,  urgent  escalation  
+Example:  
+Situation:  Bed  1204  has  orange  alert  due  to  rising  BP  and  persistent  hyperglycemia.  
+Background:
+ 
+62-year-old
+ 
+diabetic
+ 
+patient,
+ 
+post-operative
+ 
+day
+ 
+2.
+ 
+Assessment:
+ 
+SBP
+ 
+148
+ 
+→
+ 
+164
+ 
+→
+ 
+178;
+ 
+glucose
+ 
+210
+ 
+→
+ 
+236
+ 
+→
+ 
+262
+ 
+over
+ 
+three
+ 
+shifts.
+ 
+Recommendation:
+ 
+Recheck
+ 
+vitals,
+ 
+inform
+ 
+duty
+ 
+doctor,
+ 
+monitor
+ 
+glucose
+ 
+and
+ 
+BP
+ 
+as
+ 
+per
+ 
+protocol.
+ 
+ 
+ 
+--- PAGE 9 ---
+8.  Autonomous  Agents  in  the  System  
+Agent  Responsibility  
+Shift  Watch  Agent  Monitors  each  patient  across  shifts  
+Missing  Vitals  Agent  Finds  missing  or  delayed  vitals  
+Trend  Detection  Agent  
+Detects  deterioration  patterns  
+Risk  Scoring  Agent  Assigns  green/yellow/orange/red  
+Handover  Agent  Creates  SBAR  notes  
+Escalation  Agent  Notifies  responsible  staff  
+Closure  Agent  Checks  alert  acknowledgement  and  action  
+Audit  Agent  Records  every  alert,  action,  delay,  and  escalation  
+Quality  Agent  Creates  ward-level  safety  reports  
+Learning  Agent  Reviews  false  positives  and  proposes  rule  tuning,  after  clinician  approval  
+The  Learning  Agent  should  not  automatically  change  clinical  rules.  It  can  only  recommend  
+changes
+ 
+for
+ 
+quality
+ 
+committee
+ 
+review.
+ 
+ 
+ 
+ 
+ 
+ 
+--- PAGE 10 ---
+9.  Dashboard  Design  
+A.  Ward-level  view  
+Bed  Patient  Risk  Main  issue  Last  action  Time  pending  
+1204  Patient  A  Red  SBP  190,  chest  pain  Doctor  informed  3  min  
+1211  Patient  B  Orange  
+Glucose  rising  3  shifts  No  action  18  min  
+1218  Patient  C  
+Yellow  HR  rising  Recheck  done  Closed  
+B.  Patient-level  view  
+Show:  
+●  14-day  trend  chart;  ●  shift-wise  vitals;  ●  alert  history;  ●  nurse  action  log;  ●  AI  summary;  ●  doctor  notes;  ●  pending  tasks.  
+C.  Command-centre  view  
+Show:  
+●  total  red  alerts;  ●  unacknowledged  alerts;  ●  ward-wise  risk  heatmap;  ●  average  response  time;  ●  repeated  deterioration  cases;  ●  shift  handover  risk  list.  
+ 
+ 
+--- PAGE 11 ---
+10.  Example  Full  Workflow  
+Scenario  
+Patient  in  Bed  1204  has  diabetes  and  hypertension.  
+Shift  SBP  
+DBP  Glucose  
+HR  SpO ₂  
+Morning  142  88  178  86  97  
+Evening  158  94  205  98  96  
+Night  176  100  238  110  95  
+AI  detection  
+●  BP  rising  >10%  across  shifts.  ●  Glucose  rising  >20  mg/dL  across  shifts.  ●  BP  above  140/90  for  three  shifts.  ●  Glucose  above  180  for  two  shifts.  ●  HR  rising.  
+Alert  
+Orange  alert:  Patient  worsening  across  shifts.  
+AI  handover  summary  
+“Patient  shows  worsening  cardiometabolic  trend  over  three  shifts:  SBP  increased  
+from
+ 
+142
+ 
+to
+ 
+176,
+ 
+glucose
+ 
+increased
+ 
+from
+ 
+178
+ 
+to
+ 
+238,
+ 
+and
+ 
+HR
+ 
+increased
+ 
+from
+ 
+86
+ 
+to
+ 
+110.
+ 
+BP
+ 
+has
+ 
+remained
+ 
+above
+ 
+140/90
+ 
+for
+ 
+three
+ 
+shifts.
+ 
+Please
+ 
+recheck
+ 
+vitals,
+ 
+verify
+ 
+medication
+ 
+adherence,
+ 
+and
+ 
+inform
+ 
+duty
+ 
+doctor
+ 
+as
+ 
+per
+ 
+ward
+ 
+protocol.”
+ 
+Agentic  follow-up  
+●  Alert  sent  to  assigned  nurse.  ●  Nurse  must  acknowledge.  ●  If  not  acknowledged  in  15  minutes,  nursing  supervisor  is  alerted.  ●  If  no  action  in  30  minutes,  duty  doctor  is  alerted.  
+--- PAGE 12 ---
+●  All  events  are  logged.  
+ 
+11.  Safety  Rules  
+The  system  must  follow  these  principles:  
+1.  AI  does  not  prescribe.  2.  AI  does  not  diagnose.  3.  AI  only  recommends  escalation,  recheck,  or  clinical  review.  4.  Every  alert  must  be  explainable.  5.  Every  alert  must  be  auditable.  6.  Nurses  and  doctors  can  mark  false  positives  with  reason.  7.  No  silent  closure  of  red  alerts.  8.  Thresholds  must  be  approved  by  hospital  clinicians.  9.  Patient-specific  thresholds  must  be  possible.  10.  Alarm  fatigue  must  be  monitored.  
+ 
+12.  Summary  
+NurseWatch-AI  is  an  agentic  early-warning  and  shift-handover  system  for  
+Amrita
+ 
+Hospital
+ 
+Faridabad.
+ 
+It
+ 
+continuously
+ 
+monitors
+ 
+vital-sign
+ 
+trends
+ 
+across
+ 
+nursing
+ 
+shifts,
+ 
+detects
+ 
+hidden
+ 
+deterioration,
+ 
+generates
+ 
+SBAR
+ 
+handover
+ 
+summaries,
+ 
+escalates
+ 
+unacknowledged
+ 
+alerts,
+ 
+and
+ 
+creates
+ 
+a
+ 
+complete
+ 
+audit
+ 
+trail
+ 
+for
+ 
+patient
+ 
+safety
+ 
+and
+ 
+quality
+ 
+improvement.
+ 
+ 

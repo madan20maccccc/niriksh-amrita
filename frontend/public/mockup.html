@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NirikshAmrita Interactive Mockup Prototype</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #faf8fb;
+    }
+    h1, h2, h3, h4, .font-display {
+      font-family: 'Outfit', sans-serif;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(244, 114, 182, 0.15);
+    }
+    .shadow-premium {
+      box-shadow: 0 10px 30px -12px rgba(219, 39, 119, 0.12), 0 4px 12px -4px rgba(219, 39, 119, 0.04);
+    }
+    .shadow-phone {
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+    }
+    /* Scanner animation */
+    @keyframes scan {
+      0% { top: 0%; opacity: 0.8; }
+      50% { top: 100%; opacity: 0.8; }
+      100% { top: 0%; opacity: 0.8; }
+    }
+    .scan-line {
+      animation: scan 2s infinite linear;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-16">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-pink-100/50 py-4 px-6 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white shadow-md">
+          <i data-lucide="heart-pulse" class="h-6 w-6"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-xl tracking-tight text-slate-800 flex items-center gap-2">
+            NirikshAmrita <span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded-full font-bold">PROTOTYPE</span>
+          </h1>
+          <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Interactive Shift Safety Mockup</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500 font-semibold bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5">
+          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> Ready for Team Presentation
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 mt-8 grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+
+    <!-- Left: Interactive App Mockup -->
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+          <i data-lucide="tablet-smartphone" class="text-pink-500 h-5 w-5"></i> App Simulator Screen
+        </h2>
+        <span class="text-xs text-pink-600 font-bold">Click buttons to test user flow</span>
+      </div>
+
+      <!-- Navigation Simulator tabs -->
+      <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/50">
+        <button id="tab-vitals" onclick="switchTab('vitals')" class="flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition bg-white text-pink-600 shadow-sm">
+          <i data-lucide="camera" class="h-4 w-4"></i> Step 1: Scan & Ingest Vitals
+        </button>
+        <button id="tab-dashboard" onclick="switchTab('dashboard')" class="flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900">
+          <i data-lucide="layout-dashboard" class="h-4 w-4"></i> Step 2: Patient Safety Sheet
+        </button>
+      </div>
+
+      <!-- APP CONTENT BODY -->
+      <div class="glass rounded-3xl p-6 shadow-premium relative min-h-[450px]">
+        
+        <!-- SECTION 1: VITALS ENTRY OCR PORTAL -->
+        <div id="panel-vitals" class="space-y-6">
+          <div class="border-b border-pink-100/50 pb-4">
+            <h3 class="font-extrabold text-lg text-slate-800 flex items-center gap-2">
+              AI Telemetry OCR Scan Portal
+            </h3>
+            <p class="text-xs text-slate-400 font-semibold mt-0.5">Entering parameters for: Ananya Sharma (Bed 102)</p>
+          </div>
+
+          <!-- OCR Dropzone / Mock scanner -->
+          <div class="border-2 border-dashed border-pink-200 bg-pink-50/20 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden min-h-[200px]">
+            <!-- Scanner Beam overlay -->
+            <div id="scan-beam" class="hidden absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent scan-line z-10"></div>
+            
+            <div id="scan-initial" class="space-y-4">
+              <div class="h-12 w-12 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mx-auto">
+                <i data-lucide="camera" class="h-6 w-6"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-800">Scan bedside vital monitor screen</h4>
+                <p class="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">Click "Run Mock Scan" to simulate camera reading the digital values.</p>
+              </div>
+              <div class="flex gap-2 justify-center">
+                <button onclick="startMockScan()" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5">
+                  <i data-lucide="play" class="h-3.5 w-3.5"></i> Run Mock Scan
+                </button>
+                <button class="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition flex items-center gap-1.5">
+                  <i data-lucide="upload" class="h-3.5 w-3.5"></i> Upload Photo
+                </button>
+              </div>
+            </div>
+
+            <div id="scan-progress" class="hidden space-y-3 w-full max-w-xs">
+              <div class="h-8 w-8 rounded-full border-4 border-pink-500 border-t-transparent animate-spin mx-auto"></div>
+              <div class="text-xs font-bold text-slate-700">Analyzing Telemetry Digits...</div>
+              <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-pink-500 transition-all duration-200" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div id="scan-success" class="hidden space-y-2">
+              <div class="h-10 w-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                <i data-lucide="check" class="h-5 w-5"></i>
+              </div>
+              <h4 class="text-xs font-bold text-slate-800">OCR Scan Completed!</h4>
+              <p class="text-[10px] text-slate-400 font-semibold">126 bpm Pulse, 89% SpO2, 98/54 BP extracted.</p>
+              <button onclick="resetScan()" class="text-[10px] text-pink-600 font-bold hover:underline">Scan Another</button>
+            </div>
+          </div>
+
+          <!-- Parameter Ingest Form -->
+          <form onsubmit="handleFormSubmit(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Blood Pressure (mmHg)</label>
+                <input id="input-bp" type="text" placeholder="e.g. 120/80" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-pink-300 font-bold transition">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Heart Rate (bpm)</label>
+                <input id="input-hr" type="number" placeholder="e.g. 80" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-pink-300 font-bold transition">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">SpO2 (%)</label>
+                <input id="input-spo2" type="number" placeholder="e.g. 98" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-pink-300 font-bold transition">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Temperature (°C)</label>
+                <input id="input-temp" type="text" placeholder="e.g. 36.8" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-pink-300 font-bold transition">
+              </div>
+            </div>
+            
+            <div class="flex justify-end pt-4 border-t border-slate-100">
+              <button type="submit" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center gap-1.5">
+                <i data-lucide="save" class="h-4 w-4"></i> Submit Vitals Report
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- SECTION 2: PATIENT DETAIL DASHBOARD -->
+        <div id="panel-dashboard" class="hidden space-y-6">
+          <div class="flex items-center justify-between border-b border-pink-100/50 pb-4">
+            <div>
+              <h3 class="font-extrabold text-lg text-slate-800">Ananya Sharma</h3>
+              <p class="text-xs text-slate-400 font-semibold mt-0.5">Bed 102 · Post-Operative Sepsis Risk · 62y Female</p>
+            </div>
+            <span class="bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-bold">
+              🔴 RED RISK (NEWS2: 8)
+            </span>
+          </div>
+
+          <!-- Outbound WhatsApp Gateway Alert Panel -->
+          <div class="border border-pink-200 bg-pink-50/20 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+            <div class="flex items-start gap-3">
+              <div class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
+                <i data-lucide="message-square" class="h-4.5 w-4.5"></i>
+              </div>
+              <div class="space-y-0.5">
+                <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  Outbound Doctor WhatsApp Alert
+                  <span class="bg-emerald-100 text-emerald-800 text-[8px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">WhatsApp Sent</span>
+                </h4>
+                <p class="text-[10px] text-slate-500 font-medium">NirikshAmrita dispatched direct clinical logs warning to Dr. Ramesh Iyer.</p>
+              </div>
+            </div>
+            <button onclick="togglePhonePreview(true)" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-2 rounded-xl transition flex items-center gap-1">
+              <i data-lucide="smartphone" class="h-3.5 w-3.5"></i> View Phone Preview
+            </button>
+          </div>
+
+          <!-- Telemetry cards -->
+          <div class="grid grid-cols-4 gap-3">
+            <div class="bg-rose-50 border border-rose-200/50 p-3 rounded-2xl text-center">
+              <div class="text-[9px] uppercase tracking-wider text-rose-500 font-bold">Blood Pressure</div>
+              <div class="text-base font-extrabold text-rose-700 mt-0.5">98/54</div>
+              <div class="text-[8px] text-rose-400 font-semibold">mmHg · Low SBP</div>
+            </div>
+            <div class="bg-rose-50 border border-rose-200/50 p-3 rounded-2xl text-center">
+              <div class="text-[9px] uppercase tracking-wider text-rose-500 font-bold">Heart Rate</div>
+              <div class="text-base font-extrabold text-rose-700 mt-0.5">126 bpm</div>
+              <div class="text-[8px] text-rose-400 font-semibold">Tachycardia</div>
+            </div>
+            <div class="bg-rose-50 border border-rose-200/50 p-3 rounded-2xl text-center">
+              <div class="text-[9px] uppercase tracking-wider text-rose-500 font-bold">SpO2</div>
+              <div class="text-base font-extrabold text-rose-700 mt-0.5">89%</div>
+              <div class="text-[8px] text-rose-400 font-semibold">Hypoxia</div>
+            </div>
+            <div class="bg-orange-50 border border-orange-200/50 p-3 rounded-2xl text-center">
+              <div class="text-[9px] uppercase tracking-wider text-orange-500 font-bold">Temperature</div>
+              <div class="text-base font-extrabold text-orange-700 mt-0.5">38.8°C</div>
+              <div class="text-[8px] text-orange-400 font-semibold">Fever</div>
+            </div>
+          </div>
+
+          <!-- Bilingual SBAR handover -->
+          <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+              <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="file-text" class="h-4 w-4 text-pink-500"></i> AI Handover SBAR Note
+              </h4>
+              <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                <button onclick="translateSbar('en')" id="lang-en" class="bg-white text-pink-600 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm">EN</button>
+                <button onclick="translateSbar('ml')" id="lang-ml" class="text-slate-500 px-2 py-0.5 rounded text-[9px] font-bold">ML (Malayalam)</button>
+              </div>
+            </div>
+            
+            <div id="sbar-content" class="space-y-2 text-xs font-medium text-slate-700">
+              <p><strong>Situation:</strong> Patient shows tachycardia (126 bpm) & desaturation (89%).</p>
+              <p><strong>Background:</strong> 62y female, post-operative sepsis risk protocol.</p>
+              <p><strong>Assessment:</strong> SBP 142 → 118 → 98 over three shifts indicating deterioration.</p>
+              <p><strong>Recommendation:</strong> Bedside clinician evaluation and RRT activation.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: Smartphone Simulator Preview -->
+    <div class="space-y-6 flex flex-col items-center">
+      <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2 self-start">
+        <i data-lucide="iphone" class="text-emerald-600 h-5 w-5"></i> Doctor's Phone Preview
+      </h2>
+
+      <!-- Phone Body container -->
+      <div id="phone-container" class="w-[310px] rounded-[40px] border-8 border-slate-800 bg-slate-900 shadow-phone overflow-hidden transition-all duration-300 transform opacity-50 scale-95">
+        <!-- Phone notch -->
+        <div class="h-5 bg-slate-800 w-full flex justify-center items-center">
+          <div class="h-3 w-20 bg-slate-900 rounded-b-lg"></div>
+        </div>
+
+        <!-- Phone Screen body -->
+        <div class="bg-slate-950 min-h-[420px] flex flex-col justify-between text-white relative">
+          
+          <!-- Lock Screen View (Default) -->
+          <div id="phone-lockscreen" class="p-6 flex flex-col justify-between flex-1">
+            <div class="text-center pt-8 space-y-1">
+              <div class="text-5xl font-extralight font-display">12:15</div>
+              <div class="text-xs text-slate-400 font-semibold">Friday, July 3</div>
+            </div>
+
+            <!-- Lockscreen notification -->
+            <div id="phone-notification" onclick="unlockPhone()" class="hidden bg-slate-800/80 border border-slate-700/50 backdrop-blur-md rounded-2xl p-3 shadow-md hover:bg-slate-700/80 transition cursor-pointer animate-bounce">
+              <div class="flex items-center gap-2">
+                <div class="h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <i data-lucide="message-circle" class="h-4 w-4"></i>
+                </div>
+                <div>
+                  <div class="text-[10px] font-bold text-emerald-400">NirikshAmrita Alerting</div>
+                  <div class="text-[9px] text-slate-300 font-medium">Bed 102 deterioration detected...</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+              Swipe or tap notification to unlock
+            </div>
+          </div>
+
+          <!-- WhatsApp Chat View -->
+          <div id="phone-whatsapp" class="hidden flex-1 flex flex-col justify-between">
+            <!-- Header -->
+            <div class="bg-[#075e54] p-3 flex items-center gap-2 shrink-0">
+              <div class="h-7 w-7 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center font-bold text-[10px]">AIMS</div>
+              <div>
+                <div class="text-[10px] font-bold leading-none">NirikshAmrita Alerting Unit</div>
+                <div class="text-[8px] bg-white text-[#075e54] px-1 rounded font-bold leading-none py-0.5 inline-block mt-0.5">Verified Business</div>
+              </div>
+            </div>
+
+            <!-- Messages area -->
+            <div class="bg-[#ece5dd] p-3 flex-1 flex flex-col justify-end gap-2 overflow-y-auto min-h-[300px]">
+              <div class="text-[8px] text-center text-slate-500 bg-white/70 rounded py-0.5 max-w-[150px] mx-auto font-medium shadow-sm">
+                Official clinical warnings gate.
+              </div>
+
+              <!-- Received Message bubble -->
+              <div id="whatsapp-bubble" class="hidden bg-[#dcf8c6] rounded-xl p-2.5 text-[10px] text-slate-800 shadow-sm max-w-[85%] self-end animate-[slideIn_0.3s_ease]">
+                <div class="font-bold text-[#075e54] text-[8px] mb-0.5 uppercase tracking-wider">⚠️ CRITICAL NEWS2 BREACH</div>
+                <p class="leading-normal font-semibold text-slate-700">
+                  Patient <strong>Ananya Sharma</strong> (Bed 102) is deteriorating.
+                  <br />
+                  - NEWS2 Score: <strong>8 (RED)</strong>
+                  <br />
+                  - SpO2: 89% | Pulse: 126 bpm
+                  <br />
+                  - BP: 98/54 mmHg
+                  <br />
+                  Review bedside immediately.
+                </p>
+                <div class="text-[8px] text-slate-400 text-right mt-1.5 flex justify-end items-center gap-0.5">
+                  12:15 PM <i data-lucide="check-check" class="h-3 w-3 text-emerald-500"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Phone home bar indicator -->
+        <div class="h-3 bg-slate-800 w-full flex justify-center items-center">
+          <div class="h-0.75 w-20 bg-slate-600 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Interactive Simulation Custom Dialog Popups -->
+  <div id="popup-whatsapp" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4">
+    <div class="bg-white rounded-3xl border border-pink-100 p-6 shadow-premium text-center space-y-4 max-w-sm w-full animate-in zoom-in-95">
+      <div class="h-12 w-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto animate-bounce">
+        <i data-lucide="alert-triangle" class="h-6 w-6"></i>
+      </div>
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-800">🚨 NEWS2 Deterioration Flagged!</h3>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5">Patient has crossed critical safety thresholds.</p>
+      </div>
+
+      <div class="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3.5 text-left space-y-2">
+        <div class="flex items-center gap-2 text-xs font-bold text-emerald-800">
+          <i data-lucide="message-square" class="h-4 w-4"></i> WhatsApp Alert Broadcasted
+        </div>
+        <div class="text-[10px] font-mono text-slate-700 bg-white p-2 border border-slate-100 rounded-lg shadow-sm leading-relaxed">
+          <strong>To:</strong> Dr. Ramesh Iyer (Critical Care)<br />
+          <strong>Alert:</strong> NEWS2 alert Bed 102. BP 98/54, HR 126, SpO2 89%. Review bedside immediately.
+        </div>
+      </div>
+
+      <button onclick="dismissPopup()" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3 rounded-xl transition shadow-md">
+        Continue to Patient Profile
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize icons
+    lucide.createIcons();
+
+    // Tab switcher
+    function switchTab(tab) {
+      document.getElementById('panel-vitals').classList.add('hidden');
+      document.getElementById('panel-dashboard').classList.add('hidden');
+      
+      document.getElementById('tab-vitals').className = "flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900";
+      document.getElementById('tab-dashboard').className = "flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900";
+
+      if (tab === 'vitals') {
+        document.getElementById('panel-vitals').classList.remove('hidden');
+        document.getElementById('tab-vitals').className = "flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition bg-white text-pink-600 shadow-sm";
+      } else {
+        document.getElementById('panel-dashboard').classList.remove('hidden');
+        document.getElementById('tab-dashboard').className = "flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition bg-white text-pink-600 shadow-sm";
+      }
+    }
+
+    // OCR Scanner Simulation
+    function startMockScan() {
+      document.getElementById('scan-initial').classList.add('hidden');
+      document.getElementById('scan-progress').classList.remove('hidden');
+      document.getElementById('scan-beam').classList.remove('hidden');
+      
+      let val = 0;
+      const bar = document.getElementById('progress-bar');
+      const timer = setInterval(() => {
+        val += 25;
+        bar.style.width = val + '%';
+        if (val >= 100) {
+          clearInterval(timer);
+          setTimeout(() => {
+            document.getElementById('scan-progress').classList.add('hidden');
+            document.getElementById('scan-beam').classList.add('hidden');
+            document.getElementById('scan-success').classList.remove('hidden');
+            
+            // Auto fill inputs with critical parameters
+            document.getElementById('input-bp').value = "98/54";
+            document.getElementById('input-hr').value = "126";
+            document.getElementById('input-spo2').value = "89";
+            document.getElementById('input-temp').value = "38.8";
+          }, 300);
+        }
+      }, 300);
+    }
+
+    function resetScan() {
+      document.getElementById('scan-success').classList.add('hidden');
+      document.getElementById('scan-initial').classList.remove('hidden');
+      document.getElementById('progress-bar').style.width = '0%';
+      
+      document.getElementById('input-bp').value = "";
+      document.getElementById('input-hr').value = "";
+      document.getElementById('input-spo2').value = "";
+      document.getElementById('input-temp').value = "";
+    }
+
+    // Form submit triggers critical WhatsApp popup
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      // Highlight the phone simulator to represent activity
+      togglePhonePreview(true);
+      
+      // Show screen warning alert popup
+      document.getElementById('popup-whatsapp').classList.remove('hidden');
+    }
+
+    function dismissPopup() {
+      document.getElementById('popup-whatsapp').classList.add('hidden');
+      
+      // Automatically switch to patient details dashboard tab
+      switchTab('dashboard');
+      
+      // Simulate doctor receiving notification on phone lockscreen
+      document.getElementById('phone-notification').classList.remove('hidden');
+    }
+
+    // Phone simulator control
+    function togglePhonePreview(show) {
+      const phone = document.getElementById('phone-container');
+      if (show) {
+        phone.classList.remove('opacity-50', 'scale-95');
+        phone.classList.add('opacity-100', 'scale-100');
+      } else {
+        phone.classList.remove('opacity-100', 'scale-100');
+        phone.classList.add('opacity-50', 'scale-95');
+      }
+    }
+
+    function unlockPhone() {
+      document.getElementById('phone-lockscreen').classList.add('hidden');
+      document.getElementById('phone-whatsapp').classList.remove('hidden');
+      setTimeout(() => {
+        document.getElementById('whatsapp-bubble').classList.remove('hidden');
+      }, 400);
+    }
+
+    // Handover sheet translations
+    function translateSbar(lang) {
+      document.getElementById('lang-en').className = "text-slate-500 px-2 py-0.5 rounded text-[9px] font-bold";
+      document.getElementById('lang-ml').className = "text-slate-500 px-2 py-0.5 rounded text-[9px] font-bold";
+      
+      const content = document.getElementById('sbar-content');
+      
+      if (lang === 'en') {
+        document.getElementById('lang-en').className = "bg-white text-pink-600 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm";
+        content.innerHTML = `
+          <p><strong>Situation:</strong> Patient shows tachycardia (126 bpm) & desaturation (89%).</p>
+          <p><strong>Background:</strong> 62y female, post-operative sepsis risk protocol.</p>
+          <p><strong>Assessment:</strong> SBP 142 → 118 → 98 over three shifts indicating deterioration.</p>
+          <p><strong>Recommendation:</strong> Bedside clinician evaluation and RRT activation.</p>
+        `;
+      } else {
+        document.getElementById('lang-ml').className = "bg-white text-pink-600 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm";
+        content.innerHTML = `
+          <p><strong>നിലവിലെ അവസ്ഥ (Situation):</strong> രോഗിക്ക് വേഗത്തിലുള്ള ഹൃദയമിടിപ്പും (126 bpm) കുറഞ്ഞ ഓക്സിജൻ അളവും (89%) ഉണ്ട്.</p>
+          <p><strong>പശ്ചാത്തലം (Background):</strong> 62 വയസ്സുള്ള സ്ത്രീ, ശസ്ത്രക്രിയയ്ക്ക് ശേഷമുള്ള സെപ്സിസ് രോഗബാധ സാധ്യതയുള്ള രോഗി.</p>
+          <p><strong>വിലയിരുത്തൽ (Assessment):</strong> ബിപി കഴിഞ്ഞ മൂന്ന് ഷിഫ്റ്റുകളിലായി 142 → 118 → 98 ആയി കുറഞ്ഞത് രോഗിയുടെ നില വഷളാകുന്നതിനെ സൂചിപ്പിക്കുന്നു.</p>
+          <p><strong>ശുപാർശ (Recommendation):</strong> അടിയന്തിരമായി ഡോക്ടറുടെ പരിശോധനയും റാപ്പിഡ് റെസ്പോൺസ് ടീമിന്റെ (RRT) സഹായവും ലഭ്യമാക്കുക.</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

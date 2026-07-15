@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Customized Widescreen Glassmorphic and Telemetry Visual Styles */
+@layer utilities {
+  .glow-red {
+    box-shadow: 0 0 15px -3px rgba(239, 68, 68, 0.45);
+  }
+  .glow-orange {
+    box-shadow: 0 0 15px -3px rgba(249, 115, 22, 0.45);
+  }
+  .glow-yellow {
+    box-shadow: 0 0 15px -3px rgba(234, 179, 8, 0.45);
+  }
+  .glow-emerald {
+    box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.3);
+  }
+  
+  /* Telemetry line scanner beam animations */
+  @keyframes scanBeam {
+    0% { top: 0%; opacity: 0.8; }
+    50% { top: 100%; opacity: 0.8; }
+    100% { top: 0%; opacity: 0.8; }
+  }
+  
+  .scan-line {
+    position: absolute;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ec4899, transparent);
+    animation: scanBeam 2.5s infinite linear;
+  }
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #faf9fc;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
