@@ -48,6 +48,71 @@ def shift_handover_job():
     finally:
         db.close()
 
+def sms_escalation_job():
+    """Every 15 minutes: send automatic SMS to ward doctors for all unacknowledged HIGH RISK patients."""
+    from database import SessionLocal
+    from agents.sms_notifier import send_sms_alert
+    import models as m
+    
+    db = SessionLocal()
+    try:
+        # Find all active (unacknowledged) RED or ORANGE alerts
+        active_alerts = (
+            db.query(m.Alert)
+            .filter(
+                m.Alert.status == m.AlertStatus.active,
+                m.Alert.risk_level.in_([m.RiskLevel.RED, m.RiskLevel.ORANGE])
+            )
+            .all()
+        )
+
+        if not active_alerts:
+            return
+
+        print(f"[SMS Escalation] Found {len(active_alerts)} unacknowledged high-risk alerts. Sending SMS re-alerts...")
+
+        sent_wards = set()
+        for alert in active_alerts:
+            patient = db.query(m.Patient).filter(m.Patient.id == alert.patient_id).first()
+            if not patient:
+                continue
+
+            ward = db.query(m.Ward).filter(m.Ward.id == patient.ward_id).first()
+            if not ward or not ward.doctor_phone:
+                continue
+
+            # Only send one SMS per ward to avoid spam
+            if ward.id in sent_wards:
+                continue
+            sent_wards.add(ward.id)
+
+            # Count total high-risk patients in this ward
+            ward_alert_count = sum(
+                1 for a in active_alerts
+                if db.query(m.Patient).filter(m.Patient.id == a.patient_id, m.Patient.ward_id == ward.id).first()
+            )
+
+            details = (
+                f"{ward_alert_count} unacknowledged patient(s) need immediate review. "
+                f"Latest: {patient.full_name}, {alert.message[:80]}"
+            )
+
+            result = send_sms_alert(
+                to_phone=ward.doctor_phone,
+                patient_name=patient.full_name,
+                bed_number=patient.bed_number,
+                news2_score=alert.news2_score or 0,
+                risk_level=alert.risk_level.value,
+                details=details,
+                ward_name=ward.name,
+            )
+            print(f"[SMS Escalation] Ward '{ward.name}' -> {ward.doctor_phone}: {result.get('message', '')}")
+
+    except Exception as e:
+        print(f"[SMS Escalation] ERROR: {e}")
+    finally:
+        db.close()
+
 
 # ─────────────────────────────────────────────
 # App Lifespan (startup/shutdown)
@@ -60,15 +125,17 @@ async def lifespan(app: FastAPI):
     # Schedule jobs
     scheduler.add_job(closure_check_job, "interval", minutes=5, id="closure_check")
     scheduler.add_job(shift_handover_job, "cron", hour="6,14,22", minute=0, id="shift_handover")
+    scheduler.add_job(sms_escalation_job, "interval", minutes=15, id="sms_escalation")
     scheduler.start()
 
     print("[OK] NurseWatch AI Backend Started")
     print("[OK] All agents active")
-    print("[OK] Scheduler running: closure check every 5 min, shift handover at 6/14/22h")
+    print("[OK] Scheduler: closure=5min, shift-handover=6/14/22h, SMS-escalation=15min")
     yield
 
     scheduler.shutdown()
     print("[STOP] NurseWatch AI Backend Stopped")
+
 
 
 # ─────────────────────────────────────────────
