@@ -1,9 +1,11 @@
 """
 SMS Notifier Agent — Agent 16
 Sends real carrier SMS text messages directly to the doctor's native Messages app.
-Supports:
-1. Twilio SMS Gateway (requires Account SID, Auth Token, and Sender number in .env)
-2. Textbelt Free API Gateway (zero config, sends 1 free carrier SMS message per day, no login required)
+
+Supported Gateways (in priority order):
+1. Fast2SMS (FREE for India! ~200+ SMS free credits on signup — best for demos!)
+2. Twilio SMS Gateway (paid, unlimited, production-grade)
+3. Textbelt Free API Gateway (zero config, 1 free SMS per day fallback)
 """
 
 import os
@@ -13,6 +15,8 @@ import urllib.error
 import json
 import base64
 
+# Gateway credentials (loaded from .env)
+FAST2SMS_API_KEY   = os.getenv("FAST2SMS_API_KEY", "")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN  = os.getenv("TWILIO_AUTH_TOKEN",  "")
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
@@ -28,45 +32,100 @@ def send_sms_alert(
     ward_name: str = "Unknown Ward",
 ) -> dict:
     """
-    Send a real carrier SMS message directly to the doctor's phone.
+    Send a real carrier SMS directly to the doctor's phone (Messages app).
+    Gateway priority: Fast2SMS (free India) → Twilio (paid) → Textbelt (1/day fallback)
     """
     if not to_phone:
         return {"success": False, "message": "Recipient phone number is required."}
 
-    # Format the SMS message (keep under 160 characters to fit in 1 SMS segment)
-    emoji = "🚨" if risk_level == "RED" else "⚠️"
+    # Clean phone number — strip +, spaces
+    phone_clean = to_phone.replace("+", "").replace(" ", "").strip()
+
+    # Build message text (keep plain ASCII for maximum compatibility)
+    risk_tag = "CRITICAL RED" if risk_level == "RED" else "HIGH RISK ORANGE"
     text = (
-        f"{emoji} NirikshAmrita Alert\n"
+        f"NIRIKSH ALERT - {risk_tag}\n"
         f"Patient: {patient_name}\n"
-        f"Bed: {bed_number} ({ward_name})\n"
-        f"NEWS2: {news2_score} ({risk_level})\n"
-        f"Alert: {details}\n"
-        f"Immediate review required."
+        f"Bed: {bed_number} | Ward: {ward_name}\n"
+        f"NEWS2 Score: {news2_score}\n"
+        f"{details[:100]}\n"
+        f"Amrita Hospital - Immediate review required."
     )
 
-    # 1. Try Twilio if configured
-    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER:
-        print(f"[SMS] Using Twilio Gateway to send alert to {to_phone}...")
-        return _send_via_twilio(to_phone, text)
+    # 1. Fast2SMS (FREE, India only — best option!)
+    if FAST2SMS_API_KEY:
+        print(f"[SMS] Using Fast2SMS (FREE India) to send alert to {phone_clean}...")
+        return _send_via_fast2sms(phone_clean, text)
 
-    # 2. Fallback to Textbelt Free API (1 free SMS per day)
-    print(f"[SMS] Using Textbelt Free Gateway to send alert to {to_phone}...")
-    return _send_via_textbelt(to_phone, text)
+    # 2. Twilio (paid, production-grade)
+    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER:
+        print(f"[SMS] Using Twilio Gateway to send alert to {phone_clean}...")
+        return _send_via_twilio(phone_clean, text)
+
+    # 3. Textbelt fallback (1 free SMS per day, any country)
+    print(f"[SMS] Using Textbelt Free Gateway to send alert to {phone_clean}...")
+    return _send_via_textbelt(phone_clean, text)
+
+
+def _send_via_fast2sms(to_phone: str, message: str) -> dict:
+    """
+    Fast2SMS — Free Indian SMS gateway.
+    Sign up free at https://fast2sms.com → Dashboard → Dev API → copy API key.
+    Free account gives ~Rs.50 credits = 200+ SMS messages completely free!
+    """
+    # Fast2SMS uses 10-digit Indian mobile numbers (strip country code 91 if present)
+    phone = to_phone
+    if phone.startswith("91") and len(phone) == 12:
+        phone = phone[2:]  # strip country code for Fast2SMS
+
+    url = "https://www.fast2sms.com/dev/bulkV2"
+    params = urllib.parse.urlencode({
+        "authorization": FAST2SMS_API_KEY,
+        "message": message,
+        "language": "english",
+        "route": "q",          # quick transactional route
+        "numbers": phone,
+    })
+    full_url = f"{url}?{params}"
+
+    req = urllib.request.Request(full_url, headers={
+        "cache-control": "no-cache"
+    })
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            res_body = response.read().decode("utf-8")
+            res_json = json.loads(res_body)
+            if res_json.get("return") is True:
+                print(f"[SMS] SUCCESS via Fast2SMS: {res_json.get('message', 'Sent')}")
+                return {"success": True, "message": "SMS sent via Fast2SMS! (FREE Indian gateway)"}
+            else:
+                err = str(res_json.get("message", res_body[:200]))
+                print(f"[SMS] WARNING Fast2SMS: {err}")
+                # Fallback to Twilio if Fast2SMS fails
+                if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER:
+                    print("[SMS] Falling back to Twilio...")
+                    return _send_via_twilio(to_phone, message)
+                return {"success": False, "message": f"Fast2SMS: {err}"}
+    except Exception as e:
+        print(f"[SMS] ERROR: Fast2SMS connection failed: {e}")
+        # Fallback to Twilio or Textbelt
+        if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER:
+            return _send_via_twilio(to_phone, message)
+        return _send_via_textbelt(to_phone, message)
 
 
 def _send_via_twilio(to_phone: str, message: str) -> dict:
-    # Ensure format has '+'
     to_number = to_phone if to_phone.startswith("+") else f"+{to_phone}"
     from_number = TWILIO_FROM_NUMBER if TWILIO_FROM_NUMBER.startswith("+") else f"+{TWILIO_FROM_NUMBER}"
 
     url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
-    
     payload = urllib.parse.urlencode({
         "To": to_number,
         "From": from_number,
         "Body": message
     }).encode("utf-8")
-    
+
     auth_str = f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}"
     auth_header = "Basic " + base64.b64encode(auth_str.encode("ascii")).decode("ascii")
 
@@ -80,7 +139,7 @@ def _send_via_twilio(to_phone: str, message: str) -> dict:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             if response.status == 201 or res_json.get("sid"):
-                print(f"[SMS] SUCCESS: Alert sent via Twilio: {res_json.get('sid')}")
+                print(f"[SMS] SUCCESS via Twilio: {res_json.get('sid')}")
                 return {"success": True, "message": "SMS alert sent via Twilio!"}
             return {"success": False, "message": f"Twilio returned status {response.status}"}
     except Exception as e:
@@ -89,16 +148,13 @@ def _send_via_twilio(to_phone: str, message: str) -> dict:
 
 
 def _send_via_textbelt(to_phone: str, message: str) -> dict:
-    # Textbelt expects international phone number format (e.g. +919876543210 or 919876543210)
-    phone_clean = to_phone.replace("+", "").replace(" ", "")
-    
     url = "https://textbelt.com/text"
     payload = urllib.parse.urlencode({
-        "phone": phone_clean,
+        "phone": to_phone,
         "message": message,
         "key": "textbelt"
     }).encode("utf-8")
-    
+
     req = urllib.request.Request(url, data=payload, headers={
         "Content-Type": "application/x-www-form-urlencoded"
     })
@@ -108,13 +164,13 @@ def _send_via_textbelt(to_phone: str, message: str) -> dict:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             if res_json.get("success"):
-                print(f"[SMS] SUCCESS: SMS sent via Textbelt: quota remaining {res_json.get('quotaRemaining')}")
-                return {"success": True, "message": f"SMS sent via Textbelt! (Remaining quota: {res_json.get('quotaRemaining')})"}
+                quota = res_json.get("quotaRemaining", "?")
+                print(f"[SMS] SUCCESS via Textbelt: quota remaining {quota}")
+                return {"success": True, "message": f"SMS sent via Textbelt! ({quota} free messages remaining today)"}
             else:
-                err_msg = res_json.get("error", "Quota exceeded or daily limit hit.")
-                print(f"[SMS] WARNING: Textbelt rejected: {err_msg}")
-                return {"success": False, "message": err_msg}
+                err_msg = res_json.get("error", "Daily quota exceeded.")
+                print(f"[SMS] WARNING Textbelt: {err_msg}")
+                return {"success": False, "message": f"Textbelt: {err_msg} (Try Fast2SMS — it's free for India!)"}
     except Exception as e:
-        print(f"[SMS] ERROR: Textbelt connection failed: {e}")
+        print(f"[SMS] ERROR: Textbelt failed: {e}")
         return {"success": False, "message": f"SMS connection failed: {str(e)}"}
-

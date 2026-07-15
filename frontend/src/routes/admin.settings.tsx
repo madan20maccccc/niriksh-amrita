@@ -344,67 +344,103 @@ _— Amrita Hospital Surveillance System_`}</div>
         </div>
       </Section>
 
-      {/* ─── SMS ALERTS ───────────────────────────────────────── */}
-      <Section icon={<Smartphone className="h-4.5 w-4.5" />} title="Real SMS Text Alerts" badge={smsConfigured ? "Configured ✓" : "Fallback (Textbelt)"} badgeColor={smsConfigured ? "green" : "amber"}>
+      {/* ─── FREE SMS ALERTS (Fast2SMS) ──────────────────────── */}
+      <Section icon={<Smartphone className="h-4.5 w-4.5" />} title="Free SMS Text Alerts (India)" badge={smsConfigured ? "Active" : "Setup Required"} badgeColor={smsConfigured ? "green" : "amber"}>
         <div className="space-y-5">
-          <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 space-y-2">
+          {/* How it works */}
+          <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-3">
             <div className="flex items-start gap-2.5">
-              <Info className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
-              <div className="text-sm text-amber-800 font-medium">
-                Choose your SMS Delivery Gateway:
+              <CheckCircle2 className="h-4 w-4 text-emerald-700 mt-0.5 shrink-0" />
+              <div className="text-sm text-emerald-800 font-bold">
+                100% FREE SMS — Works like Jio / Bank messages!
               </div>
             </div>
-            <p className="text-xs text-amber-700 pl-6 leading-relaxed">
-              - <strong>Textbelt Gateway (Default):</strong> Zero setup, totally free. Sends <strong>1 free carrier SMS text message per day</strong> directly to any phone. Great for quick testing!
-              <br/>- <strong>Twilio Gateway (Production):</strong> Register a Twilio account and configure below to send unlimited SMS alerts directly.
+            <p className="text-xs text-emerald-700 pl-6 leading-relaxed">
+              Uses <strong>Fast2SMS</strong> (Indian free SMS gateway). You get <strong>~200+ free SMS messages</strong> on signup.
+              Messages arrive in the doctor's native <strong>Messages app</strong> with the default phone <strong>beep and vibration</strong> — exactly like bank OTP or Jio recharge messages!
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Twilio Account SID</label>
-              <input
-                type="text"
-                placeholder="AC..."
-                value={twilioSid}
-                onChange={e => setTwilioSid(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Twilio Auth Token</label>
-              <input
-                type="password"
-                placeholder="Token"
-                value={twilioToken}
-                onChange={e => setTwilioToken(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Twilio From Number</label>
-              <input
-                type="text"
-                placeholder="+1234567890"
-                value={twilioFrom}
-                onChange={e => setTwilioFrom(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
+            <div className="pl-6 space-y-1.5">
+              {[
+                { step: "1", text: "Go to ", highlight: "fast2sms.com", subtext: " and sign up free (use Google login)" },
+                { step: "2", text: "Go to Dashboard → Dev API → Copy your ", highlight: "API Authorization Key" },
+                { step: "3", text: "Paste it below and click Save!" },
+              ].map(s => (
+                <div key={s.step} className="flex items-start gap-2 text-xs text-emerald-800 font-medium">
+                  <span className="h-5 w-5 rounded-full flex items-center justify-center font-bold shrink-0 text-[10px] text-white"
+                    style={{ background: "oklch(0.45 0.18 155)" }}>{s.step}</span>
+                  <div>
+                    {s.text}
+                    {s.highlight && (
+                      <span className="font-bold text-emerald-900 bg-emerald-100 rounded px-1.5 py-0.5 font-mono ml-0.5">{s.highlight}</span>
+                    )}
+                    {s.subtext && <span className="text-emerald-600">{s.subtext}</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* API Key input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fast2SMS API Key</label>
+            <input
+              type="text"
+              placeholder="Paste your Fast2SMS API key here..."
+              value={smsPhone ? twilioSid : twilioSid}
+              onChange={e => setTwilioSid(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            />
+            <p className="text-[11px] text-slate-400">Found at: fast2sms.com → Dashboard → Dev API</p>
+          </div>
+
+          {/* Save button */}
+          <button
+            onClick={async () => {
+              if (!twilioSid) { toast.error("Paste your Fast2SMS API key first."); return; }
+              setSmsSaving(true);
+              try {
+                const { saveFast2SMSConfig } = await import("@/lib/api");
+                const res = await saveFast2SMSConfig(twilioSid);
+                if (res.success) {
+                  setSmsConfigured(true);
+                  toast.success("Fast2SMS saved! Free SMS alerts are now active.");
+                } else {
+                  toast.error(res.message || "Failed to save.");
+                }
+              } catch (e: any) { toast.error(e.message); }
+              finally { setSmsSaving(false); }
+            }}
+            disabled={smsSaving || !twilioSid}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl disabled:opacity-50 hover:scale-[1.01] active:scale-[0.98] transition"
+            style={{ background: "linear-gradient(135deg, oklch(0.45 0.18 155), oklch(0.50 0.16 165))" }}
+          >
+            {smsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Save Fast2SMS Key
+          </button>
+
+          {/* Test SMS */}
           <div className="border-t border-slate-100 pt-4 space-y-3">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Send Test SMS Text Message</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Send a Test SMS to Your Phone</label>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="e.g. 919876543210 (include country code)"
+                placeholder="Enter 10-digit Indian mobile number (e.g. 9876543210)"
                 value={smsPhone}
-                onChange={e => setSmsPhone(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                onChange={e => setSmsPhone(e.target.value.replace(/\D/g, ""))}
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
               />
               <button
-                onClick={handleTestSMS}
+                onClick={async () => {
+                  if (!smsPhone) { toast.error("Enter your phone number."); return; }
+                  setSmsTesting(true); setSmsStatus("idle");
+                  try {
+                    const { testFast2SMS } = await import("@/lib/api");
+                    const res = await testFast2SMS(smsPhone, twilioSid);
+                    if (res.success) { setSmsStatus("ok"); toast.success("SMS sent! Check your Messages app."); }
+                    else { setSmsStatus("fail"); toast.error(res.message || "SMS failed."); }
+                  } catch (e: any) { setSmsStatus("fail"); toast.error(e.message); }
+                  finally { setSmsTesting(false); }
+                }}
                 disabled={smsTesting || !smsPhone}
                 className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, oklch(0.56 0.19 195), oklch(0.52 0.18 185))" }}
@@ -415,26 +451,24 @@ _— Amrita Hospital Surveillance System_`}</div>
             </div>
             {smsStatus === "ok" && (
               <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" /> SMS text alert dispatched successfully! Check your native Messages app.
+                <CheckCircle2 className="h-3.5 w-3.5" /> SMS sent! Check your phone's Messages app.
               </p>
             )}
             {smsStatus === "fail" && (
               <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
-                <AlertTriangle className="h-3.5 w-3.5" /> SMS dispatch failed (check Twilio keys, daily limit, or verify number format).
+                <AlertTriangle className="h-3.5 w-3.5" /> SMS failed — check API key and phone number format.
               </p>
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={handleSaveSMS}
-              disabled={smsSaving || !twilioSid || !twilioToken || !twilioFrom}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl disabled:opacity-50 hover:scale-[1.01] active:scale-[0.98] transition"
-              style={{ background: "linear-gradient(135deg, oklch(0.45 0.22 258), oklch(0.52 0.20 268))" }}
-            >
-              {smsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Save & Activate Twilio Gateway
-            </button>
+          {/* Auto-alert info */}
+          <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-700 font-medium flex items-start gap-2">
+            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
+            <span>
+              <strong>Automatic alerts:</strong> When Fast2SMS is active and a ward has a doctor phone number configured,
+              SMS alerts fire <strong>immediately</strong> on critical vitals AND <strong>every 15 minutes</strong> for all unacknowledged RED/ORANGE patients.
+              Set doctor phone numbers in the <strong>Wards</strong> tab.
+            </span>
           </div>
         </div>
       </Section>

@@ -342,3 +342,23 @@ export async function getSMSConfig() {
   return request("/alerts/sms/config");
 }
 
+// ─────────────────────────────────────────────
+// FAST2SMS (FREE INDIA) CONFIG
+// ─────────────────────────────────────────────
+export async function testFast2SMS(toPhone: string, apiKey?: string) {
+  return request("/alerts/sms/fast2sms/test", {
+    method: "POST",
+    body: JSON.stringify({ to_phone: toPhone, api_key: apiKey }),
+  });
+}
+
+export async function saveFast2SMSConfig(apiKey: string) {
+  return request("/alerts/sms/fast2sms/save-config", {
+    method: "POST",
+    body: JSON.stringify({ api_key: apiKey }),
+  });
+}
+
+export async function getFast2SMSConfig() {
+  return request("/alerts/sms/fast2sms/config");
+}

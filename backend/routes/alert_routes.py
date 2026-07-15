@@ -27,6 +27,15 @@ class SMSTestRequest(BaseModel):
     twilio_from: Optional[str] = ""
 
 
+class Fast2SMSConfig(BaseModel):
+    api_key: str
+
+
+class Fast2SMSTestRequest(BaseModel):
+    to_phone: str
+    api_key: Optional[str] = ""
+
+
 
 class WhatsAppConfig(BaseModel):
     phone: str
@@ -261,3 +270,70 @@ def get_sms_config(current_user: models.User = Depends(get_current_user)):
         "twilio_from": frm[:4] + "****" + frm[-2:] if len(frm) > 6 else "",
     }
 
+
+# ─── FAST2SMS (FREE INDIA) ────────────────────────────────────────────
+
+@router.post("/sms/fast2sms/save-config")
+def save_fast2sms_config(
+    cfg: Fast2SMSConfig,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Save Fast2SMS API key to .env (free Indian SMS gateway)."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    lines = [l for l in lines if not l.startswith("FAST2SMS_API_KEY=")]
+    lines.append(f"FAST2SMS_API_KEY={cfg.api_key}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    import agents.sms_notifier as sn
+    sn.FAST2SMS_API_KEY = cfg.api_key
+    os.environ["FAST2SMS_API_KEY"] = cfg.api_key
+
+    return {"success": True, "message": "Fast2SMS API key saved! Free Indian SMS alerts are now active."}
+
+
+@router.post("/sms/fast2sms/test")
+def test_fast2sms(
+    req: Fast2SMSTestRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Send a test SMS via Fast2SMS free Indian gateway."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    import agents.sms_notifier as sn
+    if req.api_key:
+        sn.FAST2SMS_API_KEY = req.api_key
+
+    result = send_sms_alert(
+        to_phone=req.to_phone,
+        patient_name="Test Patient",
+        bed_number="Test-Bed",
+        news2_score=8,
+        risk_level="RED",
+        details="This is a test SMS from NirikshAmrita hospital system.",
+        ward_name="Emergency"
+    )
+    return result
+
+
+@router.get("/sms/fast2sms/config")
+def get_fast2sms_config(current_user: models.User = Depends(get_current_user)):
+    """Get current Fast2SMS config status."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    key = os.getenv("FAST2SMS_API_KEY", "")
+    return {
+        "configured": bool(key),
+        "api_key": key[:6] + "****" if len(key) > 6 else "",
+    }
