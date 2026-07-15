@@ -390,16 +390,43 @@ function VitalsPage() {
       const news2 = result?.news2_score ?? 0;
 
       if (riskLabel === "RED" || riskLabel === "ORANGE") {
-        setWhatsAppOverlay({ patientName: patient?.full_name || "Patient", bed: patient?.bed_number || "N/A", news2, risk: riskLabel, doctor: "Dr. Ramesh Iyer", phone: "+91 98765 43210" });
+        // Trigger browser physical vibration
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 200]);
+        }
+        
+        // Trigger medical alarm beep
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+          gain.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.3);
+          gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.4);
+        } catch {}
+
+        toast.error(`⚠️ CRITICAL ESCALATION DISPATCHED`, {
+          description: `Vitals logged. Real WhatsApp alert sent to Ward Doctor! NEWS2: ${news2}`,
+          duration: 6000
+        });
       } else {
-        toast.success(`Vitals saved · NEWS2: ${news2} · ${riskLabel}`);
-        navigate({ to: `/nurse/patient/${pId}` as never });
+        toast.success(`Vitals logged · NEWS2: ${news2} · Stable`);
       }
+      
+      navigate({ to: `/nurse/patient/${pId}` as never });
     } catch (err: any) {
       setFormError(err.message || "Failed to save vitals");
       setSaving(false);
     }
   };
+
 
   if (loading) return <SkeletonLoader />;
 
@@ -821,68 +848,6 @@ function VitalsPage() {
         </div>
       </main>
 
-      {/* ── WhatsApp Critical Alert Overlay ── */}
-      {whatsAppOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "oklch(0.1 0.03 258 / 0.75)", backdropFilter: "blur(12px)" }}>
-          <div className="w-full max-w-[420px] rounded-3xl bg-white p-7 animate-in zoom-in-95 fade-in duration-300 space-y-6"
-            style={{ boxShadow: "0 30px 80px oklch(0.1 0.03 258 / 0.30), 0 0 0 1px oklch(0.9 0.01 250)" }}>
-
-            {/* Alert header */}
-            <div className="text-center space-y-3">
-              <div className="relative h-16 w-16 mx-auto">
-                <div className="absolute inset-0 rounded-full bg-red-100 animate-ping opacity-60" />
-                <div className="relative h-16 w-16 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center">
-                  <AlertTriangle className="h-7 w-7 text-red-600" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>
-                  Critical Deterioration Detected
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  NEWS2 Score: <strong className="text-red-600">{whatsAppOverlay.news2}</strong> · Risk Level: <strong className="text-red-600">{whatsAppOverlay.risk}</strong>
-                </p>
-              </div>
-            </div>
-
-            {/* Patient info */}
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700 space-y-1">
-              <div><strong>Patient:</strong> {whatsAppOverlay.patientName}</div>
-              <div><strong>Bed:</strong> {whatsAppOverlay.bed}</div>
-            </div>
-
-            {/* WhatsApp alert preview */}
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <MessageSquare className="h-3.5 w-3.5 text-white" />
-                </div>
-                <div className="text-xs font-bold text-emerald-800">WhatsApp Alert Dispatched</div>
-              </div>
-              <div className="bg-white rounded-xl border border-emerald-100 p-3 text-[11px] font-mono text-slate-700 leading-relaxed">
-                <div className="text-emerald-700 font-bold mb-1">To: {whatsAppOverlay.doctor}</div>
-                <div className="text-slate-500 mb-2">{whatsAppOverlay.phone}</div>
-                🚨 Critical warning: <strong>{whatsAppOverlay.patientName}</strong> (Bed {whatsAppOverlay.bed}) has NEWS2 score of {whatsAppOverlay.news2}. Immediate bedside review required.
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-bold">
-                <CheckCheck className="h-3.5 w-3.5" /> Delivered · Seen
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate({ to: `/nurse/patient/${pId}` as never })}
-              className="w-full py-3.5 text-sm font-bold text-white rounded-2xl transition-all hover:scale-[1.01] active:scale-95"
-              style={{
-                background: "linear-gradient(135deg, oklch(0.20 0.04 258), oklch(0.28 0.06 258))",
-                boxShadow: "0 4px 16px oklch(0.20 0.04 258 / 0.40)"
-              }}
-            >
-              Continue to Patient Sheet
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

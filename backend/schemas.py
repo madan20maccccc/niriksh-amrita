@@ -56,6 +56,8 @@ class WardCreate(BaseModel):
     floor: int
     capacity: int = 20
     ward_type: str = "General"
+    doctor_phone: Optional[str] = None
+    callmebot_key: Optional[str] = None
 
 class WardOut(BaseModel):
     id: int
@@ -63,6 +65,8 @@ class WardOut(BaseModel):
     floor: int
     capacity: int
     ward_type: str
+    doctor_phone: Optional[str] = None
+    callmebot_key: Optional[str] = None
     class Config:
         from_attributes = True
 

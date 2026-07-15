@@ -151,6 +151,10 @@ async def enter_vitals(
     if risk_level.value in ["RED", "ORANGE"] and created_alerts:
         ward = db.query(models.Ward).filter(models.Ward.id == patient.ward_id).first()
         alert_msg = created_alerts[0].message if created_alerts else f"NEWS2 Score {ews_data['total_score']}"
+        
+        custom_phone = ward.doctor_phone if (ward and ward.doctor_phone) else ""
+        custom_key = ward.callmebot_key if (ward and ward.callmebot_key) else ""
+        
         background_tasks.add_task(
             send_whatsapp_alert,
             patient.full_name,
@@ -159,6 +163,8 @@ async def enter_vitals(
             risk_level.value,
             alert_msg,
             ward.name if ward else "Unknown Ward",
+            custom_phone,
+            custom_key
         )
 
     # ── Agent 12 (WebSocket): Broadcast to dashboard ─────────────

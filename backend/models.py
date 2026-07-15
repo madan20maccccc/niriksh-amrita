@@ -83,6 +83,8 @@ class Ward(Base):
     capacity = Column(Integer, default=20)
     ward_type = Column(String, default="General")  # ICU, CCU, General, Pediatric, etc.
     head_nurse_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    doctor_phone = Column(String, nullable=True)      # Ward doctor's personal phone
+    callmebot_key = Column(String, nullable=True)     # Doctor's specific callmebot apikey
 
     patients = relationship("Patient", back_populates="ward")
 

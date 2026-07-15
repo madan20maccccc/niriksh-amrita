@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Pencil, Trash2, Eye, Hospital, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Hospital, Loader2, Save, X, Phone, Key } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, SectionHeader } from "@/components/ui/section";
 import { StatusPill } from "@/components/ui/status-pill";
-import { getWards, getPatients, getNurses } from "@/lib/api";
+import { getWards, getPatients, getNurses, createWard, updateWard, deleteWard } from "@/lib/api";
+import { toast } from "sonner";
 
 type WardSearch = {
   wardId?: number;
@@ -27,6 +28,11 @@ function WardsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
+  
+  // Modals state
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [activeWard, setActiveWard] = useState<any>(null);
 
   useEffect(() => {
     if (search.wardId) {
@@ -56,6 +62,17 @@ function WardsPage() {
     loadData();
   }, []);
 
+  const handleDeleteWard = async (wardId: number, wardName: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${wardName} Ward?`)) return;
+    try {
+      await deleteWard(wardId);
+      toast.success(`${wardName} Ward deleted successfully.`);
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete ward.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-3">
@@ -80,11 +97,7 @@ function WardsPage() {
   const selectedWard = selectedWardId ? wards.find(w => w.id === selectedWardId) : null;
 
   if (selectedWard) {
-    // In our database schema:
-    // Patient has ward_id
-    // Nurse / User model doesn't explicitly have ward_id unless stored in department. We can match nurse.department with ward.name or similar.
     const wp = patients.filter(p => p.ward_id === selectedWard.id);
-    // Let's match nurses by department
     const wn = nurses.filter(n => n.department === selectedWard.name);
     
     // Determine ward status
@@ -119,6 +132,24 @@ function WardsPage() {
             <Mini label="Active Patients" value={wp.length} />
             <Mini label="Nurses Stationed" value={wn.length} />
           </div>
+
+          {/* Doctor phone display */}
+          {(selectedWard.doctor_phone || selectedWard.callmebot_key) && (
+            <div className="mt-5 border-t border-slate-100 pt-4 flex flex-wrap gap-6 text-xs text-slate-500 font-medium">
+              {selectedWard.doctor_phone && (
+                <div className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Ward Doctor Phone: <strong className="text-slate-800 font-bold">+{selectedWard.doctor_phone}</strong></span>
+                </div>
+              )}
+              {selectedWard.callmebot_key && (
+                <div className="flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5 text-slate-400" />
+                  <span>CallMeBot API Key: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">configured ✓</span></span>
+                </div>
+              )}
+            </div>
+          )}
         </Card>
         
         <div className="grid gap-6 lg:grid-cols-2">
@@ -185,7 +216,10 @@ function WardsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <SectionHeader title="Hospital Wards" hint="Configuration and occupancy surveillance" />
-        <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant hover:opacity-95">
+        <button
+          onClick={() => setShowAdd(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant hover:opacity-95"
+        >
           <Plus className="h-4 w-4" /> Add Ward
         </button>
       </div>
@@ -199,6 +233,7 @@ function WardsPage() {
                 <th className="px-5 py-3 text-left">Location (Floor)</th>
                 <th className="px-5 py-3 text-left">Bed Occupancy</th>
                 <th className="px-5 py-3 text-left">Nurses Stationed</th>
+                <th className="px-5 py-3 text-left">Doctor Contact</th>
                 <th className="px-5 py-3 text-left">Safety Level</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -216,24 +251,27 @@ function WardsPage() {
 
                 return (
                   <tr key={w.id} className="hover:bg-slate-50/50">
-                    <td className="px-5 py-4 font-semibold text-foreground">{w.name} Ward</td>
+                    <td className="px-5 py-4 font-semibold text-slate-800">{w.name} Ward</td>
                     <td className="px-5 py-4 text-muted-foreground">Floor {w.floor || 1}</td>
                     <td className="px-5 py-4 font-medium">
                       {wp.length} / {w.capacity || 20} beds ({Math.round(wp.length / (w.capacity || 20) * 100)}%)
                     </td>
                     <td className="px-5 py-4">{wn.length}</td>
+                    <td className="px-5 py-4 text-xs font-medium text-slate-500 font-mono">
+                      {w.doctor_phone ? `+${w.doctor_phone}` : "—"}
+                    </td>
                     <td className="px-5 py-4">
                       <StatusPill tone={tone}>{status}</StatusPill>
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <IconBtn onClick={() => setSelectedWardId(w.id)}>
+                        <IconBtn onClick={() => setSelectedWardId(w.id)} title="View Ward Detail">
                           <Eye className="h-4.5 w-4.5" />
                         </IconBtn>
-                        <IconBtn>
+                        <IconBtn onClick={() => { setActiveWard(w); setShowEdit(true); }} title="Edit Ward config">
                           <Pencil className="h-4 w-4" />
                         </IconBtn>
-                        <IconBtn>
+                        <IconBtn onClick={() => handleDeleteWard(w.id, w.name)} title="Delete Ward">
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </IconBtn>
                       </div>
@@ -245,6 +283,169 @@ function WardsPage() {
           </table>
         </div>
       </Card>
+
+      {/* Ward Modals */}
+      {showAdd && (
+        <WardModal
+          onClose={() => setShowAdd(false)}
+          onSave={loadData}
+        />
+      )}
+
+      {showEdit && activeWard && (
+        <WardModal
+          ward={activeWard}
+          onClose={() => { setShowEdit(false); setActiveWard(null); }}
+          onSave={loadData}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// WARD FORM MODAL
+// ─────────────────────────────────────────────
+function WardModal({ ward, onClose, onSave }: { ward?: any; onClose: () => void; onSave: () => void }) {
+  const isEdit = !!ward;
+  const [form, setForm] = useState({
+    name: ward?.name || "",
+    floor: ward?.floor || "",
+    capacity: ward?.capacity || 20,
+    ward_type: ward?.ward_type || "General",
+    doctor_phone: ward?.doctor_phone || "",
+    callmebot_key: ward?.callmebot_key || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setErr(null);
+
+    const payload = {
+      ...form,
+      floor: parseInt(form.floor as string),
+      capacity: parseInt(form.capacity as string),
+      doctor_phone: form.doctor_phone.replace(/\D/g, ""), // Keep numeric only
+    };
+
+    try {
+      if (isEdit) {
+        await updateWard(ward.id, payload);
+        toast.success("Ward configuration updated!");
+      } else {
+        await createWard(payload);
+        toast.success("New Hospital Ward registered!");
+      }
+      onSave();
+      onClose();
+    } catch (e: any) {
+      setErr(e.message || "Failed to save ward configurations.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-elegant">
+        <h3 className="font-display text-xl text-foreground font-bold">{isEdit ? "Edit Ward Configuration" : "Add New Ward"}</h3>
+        <p className="text-sm text-muted-foreground mt-1">Configure telemetry settings and ward doctor routing.</p>
+        
+        {err && <div className="mt-3 rounded-xl bg-destructive/10 text-destructive text-xs p-3 border border-destructive/20">{err}</div>}
+        
+        <form onSubmit={handleSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm sm:col-span-2">
+            <span className="font-medium text-foreground">Ward Name *</span>
+            <input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. ICU - Block C"
+              required
+              className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </label>
+
+          <label className="block text-sm">
+            <span className="font-medium text-foreground">Floor *</span>
+            <input
+              type="number"
+              value={form.floor}
+              onChange={e => setForm(f => ({ ...f, floor: e.target.value }))}
+              required
+              className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </label>
+
+          <label className="block text-sm">
+            <span className="font-medium text-foreground">Bed Capacity *</span>
+            <input
+              type="number"
+              value={form.capacity}
+              onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
+              required
+              className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </label>
+
+          <label className="block text-sm">
+            <span className="font-medium text-foreground">Ward Type</span>
+            <select
+              value={form.ward_type}
+              onChange={e => setForm(f => ({ ...f, ward_type: e.target.value }))}
+              className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="General">General Ward</option>
+              <option value="ICU">ICU (Intensive Care)</option>
+              <option value="Cardiology">Cardiology</option>
+              <option value="Surgical">Surgical</option>
+              <option value="Respiratory">Respiratory</option>
+            </select>
+          </label>
+
+          <div className="sm:col-span-2 border-t border-border pt-3 mt-1">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5" /> Ward-Specific Doctor Escalation Routing
+            </span>
+            <p className="text-[11px] text-slate-400 mt-0.5">Alerts from this ward will bypass global settings and go directly to this doctor.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="font-medium text-foreground">Doctor Phone Number</span>
+                <input
+                  type="text"
+                  placeholder="919876543210"
+                  value={form.doctor_phone}
+                  onChange={e => setForm(f => ({ ...f, doctor_phone: e.target.value }))}
+                  className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30 text-xs font-mono"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="font-medium text-foreground">CallMeBot API Key</span>
+                <input
+                  type="text"
+                  placeholder="123456"
+                  value={form.callmebot_key}
+                  onChange={e => setForm(f => ({ ...f, callmebot_key: e.target.value }))}
+                  className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30 text-xs font-mono"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="sm:col-span-2 border-t border-border pt-4 mt-2 flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-muted">Cancel</button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant disabled:opacity-60 flex items-center gap-1.5"
+            >
+              {saving ? "Saving..." : isEdit ? "Update Ward" : "Register Ward"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -258,9 +459,9 @@ function Mini({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function IconBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
+function IconBtn({ children, onClick, title }: { children: React.ReactNode; onClick?: () => void; title?: string }) {
   return (
-    <button onClick={onClick} className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-white hover:border-primary/30 hover:bg-primary-soft/50 shadow-sm transition">
+    <button onClick={onClick} title={title} className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-white hover:border-primary/30 hover:bg-primary-soft/50 shadow-sm transition">
       {children}
     </button>
   );

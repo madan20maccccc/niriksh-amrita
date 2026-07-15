@@ -29,15 +29,20 @@ def send_whatsapp_alert(
     risk_level: str,
     details: str,
     ward_name: str = "Unknown Ward",
+    custom_phone: str = "",
+    custom_apikey: str = "",
 ) -> dict:
     """
     Send a real WhatsApp message to the duty doctor/nurse via CallMeBot.
     Returns a dict with success: True/False and message.
     """
-    if not WHATSAPP_PHONE or not WHATSAPP_APIKEY:
+    phone = custom_phone or WHATSAPP_PHONE
+    apikey = custom_apikey or WHATSAPP_APIKEY
+
+    if not phone or not apikey:
         return {
             "success": False,
-            "message": "WhatsApp not configured. Add WHATSAPP_PHONE and WHATSAPP_APIKEY to .env",
+            "message": "WhatsApp not configured. Set phone number and API key in settings.",
         }
 
     emoji = "🔴" if risk_level == "RED" else "🟠"
@@ -56,9 +61,9 @@ def send_whatsapp_alert(
     encoded_text = urllib.parse.quote(text)
     url = (
         f"https://api.callmebot.com/whatsapp.php"
-        f"?phone={WHATSAPP_PHONE}"
+        f"?phone={phone}"
         f"&text={encoded_text}"
-        f"&apikey={WHATSAPP_APIKEY}"
+        f"&apikey={apikey}"
     )
 
     try:

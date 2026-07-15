@@ -277,6 +277,20 @@ export async function createWard(wardData: any) {
   });
 }
 
+export async function updateWard(wardId: number, wardData: any) {
+  return request(`/wards/${wardId}`, {
+    method: "PUT",
+    body: JSON.stringify(wardData),
+  });
+}
+
+export async function deleteWard(wardId: number) {
+  return request(`/wards/${wardId}`, {
+    method: "DELETE",
+  });
+}
+
+
 // ─────────────────────────────────────────────
 // WHATSAPP CONFIG (Admin)
 // ─────────────────────────────────────────────
