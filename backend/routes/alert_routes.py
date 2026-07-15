@@ -8,9 +8,24 @@ from auth import get_current_user
 from agents.closure import acknowledge_alert
 from agents.audit import audit_alert_acknowledged
 from agents.whatsapp_notifier import send_test_message
+from agents.sms_notifier import send_sms_alert
 from websocket_manager import manager
 
 router = APIRouter()
+
+
+class SMSConfig(BaseModel):
+    twilio_sid: str
+    twilio_token: str
+    twilio_from: str
+
+
+class SMSTestRequest(BaseModel):
+    to_phone: str
+    twilio_sid: Optional[str] = ""
+    twilio_token: Optional[str] = ""
+    twilio_from: Optional[str] = ""
+
 
 
 class WhatsAppConfig(BaseModel):
@@ -168,3 +183,81 @@ def get_whatsapp_config(current_user: models.User = Depends(get_current_user)):
         "phone":  phone[:4] + "****" + phone[-2:] if len(phone) > 6 else "",
         "apikey": apikey[:4] + "****" if len(apikey) > 4 else "",
     }
+
+
+@router.post("/sms/test")
+def test_sms(
+    req: SMSTestRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Send a test SMS message to verify setup (Twilio or Textbelt)."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Temporarily set credentials if testing specific config
+    if req.twilio_sid and req.twilio_token and req.twilio_from:
+        import agents.sms_notifier as sn
+        sn.TWILIO_ACCOUNT_SID = req.twilio_sid
+        sn.TWILIO_AUTH_TOKEN = req.twilio_token
+        sn.TWILIO_FROM_NUMBER = req.twilio_from
+        
+    result = send_sms_alert(
+        to_phone=req.to_phone,
+        patient_name="Test Patient",
+        bed_number="Bed-99",
+        news2_score=7,
+        risk_level="RED",
+        details="SMS Telemetry Test Message",
+        ward_name="Emergency"
+    )
+    return result
+
+
+@router.post("/sms/save-config")
+def save_sms_config(
+    cfg: SMSConfig,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Save Twilio SMS config to .env file (persists between restarts)."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    # Strip existing Twilio lines
+    lines = [l for l in lines if not l.startswith("TWILIO_ACCOUNT_SID=") and not l.startswith("TWILIO_AUTH_TOKEN=") and not l.startswith("TWILIO_FROM_NUMBER=")]
+    lines.append(f"TWILIO_ACCOUNT_SID={cfg.twilio_sid}\n")
+    lines.append(f"TWILIO_AUTH_TOKEN={cfg.twilio_token}\n")
+    lines.append(f"TWILIO_FROM_NUMBER={cfg.twilio_from}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    # Set in current runtime env
+    import agents.sms_notifier as sn
+    sn.TWILIO_ACCOUNT_SID = cfg.twilio_sid
+    sn.TWILIO_AUTH_TOKEN  = cfg.twilio_token
+    sn.TWILIO_FROM_NUMBER = cfg.twilio_from
+
+    return {"success": True, "message": "SMS Twilio Configuration saved successfully."}
+
+
+@router.get("/sms/config")
+def get_sms_config(current_user: models.User = Depends(get_current_user)):
+    """Get current Twilio SMS configuration (masked)."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    sid   = os.getenv("TWILIO_ACCOUNT_SID", "")
+    token = os.getenv("TWILIO_AUTH_TOKEN", "")
+    frm   = os.getenv("TWILIO_FROM_NUMBER", "")
+    return {
+        "configured": bool(sid and token and frm),
+        "twilio_sid": sid[:6] + "****" if len(sid) > 6 else "",
+        "twilio_from": frm[:4] + "****" + frm[-2:] if len(frm) > 6 else "",
+    }
+

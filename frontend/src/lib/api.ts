@@ -311,3 +311,34 @@ export async function saveWhatsAppConfig(phone: string, apikey: string) {
 export async function getWhatsAppConfig() {
   return request("/alerts/whatsapp/config");
 }
+
+// ─────────────────────────────────────────────
+// SMS CONFIG (Admin)
+// ─────────────────────────────────────────────
+export async function testSMS(toPhone: string, twilioSid?: string, twilioToken?: string, twilioFrom?: string) {
+  return request("/alerts/sms/test", {
+    method: "POST",
+    body: JSON.stringify({
+      to_phone: toPhone,
+      twilio_sid: twilioSid,
+      twilio_token: twilioToken,
+      twilio_from: twilioFrom
+    }),
+  });
+}
+
+export async function saveSMSConfig(twilioSid: string, twilioToken: string, twilioFrom: string) {
+  return request("/alerts/sms/save-config", {
+    method: "POST",
+    body: JSON.stringify({
+      twilio_sid: twilioSid,
+      twilio_token: twilioToken,
+      twilio_from: twilioFrom
+    }),
+  });
+}
+
+export async function getSMSConfig() {
+  return request("/alerts/sms/config");
+}
+

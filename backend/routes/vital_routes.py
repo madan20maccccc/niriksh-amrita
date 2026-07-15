@@ -18,6 +18,7 @@ from agents.escalation import run_escalation
 from agents.llm_summary import generate_sbar_gemini
 from agents.audit import audit_vitals_entered, audit_alert_created, audit_sbar_generated
 from agents.whatsapp_notifier import send_whatsapp_alert
+from agents.sms_notifier import send_sms_alert
 
 router = APIRouter()
 
@@ -166,6 +167,19 @@ async def enter_vitals(
             custom_phone,
             custom_key
         )
+
+        # ── Agent 16: Real Carrier SMS Alert ───────────────────
+        if custom_phone:
+            background_tasks.add_task(
+                send_sms_alert,
+                custom_phone,
+                patient.full_name,
+                patient.bed_number,
+                ews_data["total_score"],
+                risk_level.value,
+                alert_msg,
+                ward.name if ward else "Unknown Ward",
+            )
 
     # ── Agent 12 (WebSocket): Broadcast to dashboard ─────────────
     alert_dicts = [
