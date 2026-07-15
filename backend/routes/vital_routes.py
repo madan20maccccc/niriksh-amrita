@@ -17,6 +17,7 @@ from agents.risk_classifier import classify_risk
 from agents.escalation import run_escalation
 from agents.llm_summary import generate_sbar_gemini
 from agents.audit import audit_vitals_entered, audit_alert_created, audit_sbar_generated
+from agents.whatsapp_notifier import send_whatsapp_alert
 
 router = APIRouter()
 
@@ -145,6 +146,20 @@ async def enter_vitals(
     )
     for alert in created_alerts:
         audit_alert_created(db, patient.id, alert.id, alert.risk_level.value, alert.alert_type)
+
+    # ── Agent 15: Real WhatsApp Alert (RED / ORANGE) ─────────
+    if risk_level.value in ["RED", "ORANGE"] and created_alerts:
+        ward = db.query(models.Ward).filter(models.Ward.id == patient.ward_id).first()
+        alert_msg = created_alerts[0].message if created_alerts else f"NEWS2 Score {ews_data['total_score']}"
+        background_tasks.add_task(
+            send_whatsapp_alert,
+            patient.full_name,
+            patient.bed_number,
+            ews_data["total_score"],
+            risk_level.value,
+            alert_msg,
+            ward.name if ward else "Unknown Ward",
+        )
 
     # ── Agent 12 (WebSocket): Broadcast to dashboard ─────────────
     alert_dicts = [

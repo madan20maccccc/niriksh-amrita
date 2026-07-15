@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from database import get_db
 import models, schemas
 from auth import hash_password, verify_password, create_access_token, get_current_user
@@ -123,3 +124,41 @@ def reset_password(
     user.hashed_password = hash_password(reset_data.password)
     db.commit()
     return {"message": f"Password for {user.full_name} reset successfully"}
+
+
+class GeminiKeyRequest(BaseModel):
+    key: str
+
+
+@router.post("/update-gemini-key")
+def update_gemini_key(
+    req: GeminiKeyRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Admin only: updates the GEMINI_API_KEY inside .env and current process environment."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Only admins can configure system API keys")
+
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    # Strip existing GEMINI_API_KEY lines
+    lines = [l for l in lines if not l.startswith("GEMINI_API_KEY=")]
+    lines.append(f"GEMINI_API_KEY={req.key}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    # Set in current runtime env
+    os.environ["GEMINI_API_KEY"] = req.key
+    import routes.vital_routes as vr
+    vr.GEMINI_API_KEY = req.key
+
+    return {"success": True, "message": "Gemini API key updated successfully."}
+

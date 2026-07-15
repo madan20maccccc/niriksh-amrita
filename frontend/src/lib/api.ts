@@ -256,9 +256,44 @@ export async function deactivateUser(userId: number) {
   });
 }
 
+export async function registerUser(userData: any) {
+  return request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+}
+
 export async function resetUserPassword(userId: number, passwordData: any) {
   return request(`/auth/users/${userId}/reset-password`, {
     method: "POST",
     body: JSON.stringify(passwordData),
   });
+}
+
+export async function createWard(wardData: any) {
+  return request("/wards/", {
+    method: "POST",
+    body: JSON.stringify(wardData),
+  });
+}
+
+// ─────────────────────────────────────────────
+// WHATSAPP CONFIG (Admin)
+// ─────────────────────────────────────────────
+export async function testWhatsApp(phone: string, apikey: string) {
+  return request("/alerts/whatsapp/test", {
+    method: "POST",
+    body: JSON.stringify({ phone, apikey }),
+  });
+}
+
+export async function saveWhatsAppConfig(phone: string, apikey: string) {
+  return request("/alerts/whatsapp/save-config", {
+    method: "POST",
+    body: JSON.stringify({ phone, apikey }),
+  });
+}
+
+export async function getWhatsAppConfig() {
+  return request("/alerts/whatsapp/config");
 }
