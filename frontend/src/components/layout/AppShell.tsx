@@ -30,6 +30,8 @@ export function AppShell({
   const seenAlertsRef = useRef<Set<number>>(new Set());
   const isFirstLoadRef = useRef<boolean>(true);
   const [activeAlertCount, setActiveAlertCount] = useState(0);
+  const [activeAlarm, setActiveAlarm] = useState<any>(null);
+  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const s = getSession();
@@ -40,61 +42,80 @@ export function AppShell({
     setS(s);
   }, [role, navigate]);
 
+  // Play Medical double beep
+  const playAlarmSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const playBeep = (delay: number, duration: number, freq = 980) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        
+        gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+        gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + delay + 0.02);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime + delay + duration - 0.02);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + delay + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      };
+      
+      playBeep(0.0, 0.15, 1046.50); // C6 note
+      playBeep(0.2, 0.15, 1046.50);
+    } catch (err) {
+      console.error("Clinical AudioContext alarm failed:", err);
+    }
+  };
+
+  // Repeating alarm sound when activeAlarm is active
+  useEffect(() => {
+    if (activeAlarm) {
+      playAlarmSound();
+      alarmIntervalRef.current = setInterval(playAlarmSound, 2200);
+      
+      // Trigger physical hardware vibration
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([300, 100, 300, 100, 300]);
+      }
+    } else {
+      if (alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current);
+        alarmIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current);
+      }
+    };
+  }, [activeAlarm]);
+
   // Real-time Critical Alarm warning System
   useEffect(() => {
     if (!session) return;
 
-    const playAlarmSound = () => {
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        const playBeep = (delay: number, duration: number, freq = 880) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-          
-          gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
-          gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + delay + 0.02);
-          gain.gain.setValueAtTime(0.4, audioCtx.currentTime + delay + duration - 0.02);
-          gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + delay + duration);
-          
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          
-          osc.start(audioCtx.currentTime + delay);
-          osc.stop(audioCtx.currentTime + delay + duration);
-        };
-        
-        // Medical telemetry warning: double beep
-        playBeep(0.0, 0.12, 987.77); // B5 note
-        playBeep(0.18, 0.12, 987.77);
-      } catch (err) {
-        console.error("Clinical AudioContext alarm failed to start:", err);
-      }
-    };
-
     const checkLiveAlerts = async () => {
       try {
-        // Query active alerts
         const activeAlerts = await getAlerts(undefined, undefined, "active");
         
         if (isFirstLoadRef.current) {
-          // Initialize seenAlerts with pre-existing database alerts on first load
           activeAlerts.forEach((a: any) => seenAlertsRef.current.add(a.id));
           isFirstLoadRef.current = false;
           return;
         }
 
-        // Check for newly triggered critical RED alerts
-        let triggeredAlarm = false;
+        let newCriticalAlert: any = null;
         activeAlerts.forEach((alert: any) => {
           if (!seenAlertsRef.current.has(alert.id)) {
             seenAlertsRef.current.add(alert.id);
             
-            // Only trigger alarm sound and toast for RED (critical) risk alerts
             if (alert.risk_level === "RED") {
-              triggeredAlarm = true;
+              newCriticalAlert = alert;
               
               toast.error("⚠️ CRITICAL CLINICAL BREACH", {
                 description: `${alert.message}`,
@@ -105,7 +126,6 @@ export function AppShell({
                 },
               });
             } else if (alert.risk_level === "ORANGE") {
-              // Also show toast for ORANGE but without alarm
               toast.warning("🟠 High Risk Alert", {
                 description: `${alert.message}`,
                 duration: 7000,
@@ -121,19 +141,19 @@ export function AppShell({
         // Update badge count
         setActiveAlertCount(activeAlerts.length);
 
-        if (triggeredAlarm) {
-          playAlarmSound();
+        if (newCriticalAlert) {
+          setActiveAlarm(newCriticalAlert);
         }
       } catch (err) {
         console.error("Failed to fetch live alerts:", err);
       }
     };
 
-    // Check immediately, then poll every 8 seconds
     checkLiveAlerts();
     const interval = setInterval(checkLiveAlerts, 8000);
     return () => clearInterval(interval);
   }, [session, navigate]);
+
 
   const onLogout = () => {
     clearSession();
@@ -237,6 +257,77 @@ export function AppShell({
           <Outlet />
         </main>
       </div>
+
+      {/* 🚨 Full-Screen Clinical Pager / Critical Alert Overlay */}
+      {activeAlarm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "oklch(0.12 0.05 20 / 0.85)", backdropFilter: "blur(12px)" }}>
+          
+          {/* Flashing Warning Panel */}
+          <div className="w-full max-w-lg rounded-3xl bg-white p-7 text-center border-2 border-red-500 shadow-2xl relative overflow-hidden animate-pulse-slow">
+            
+            {/* Warning Glow top bar */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 animate-shimmer" />
+
+            <div className="space-y-6">
+              
+              {/* Telemetry Icon */}
+              <div className="relative h-20 w-20 mx-auto">
+                <div className="absolute inset-0 rounded-full bg-red-200 animate-ping opacity-75" />
+                <div className="relative h-20 w-20 rounded-full bg-red-100 border-2 border-red-400 flex items-center justify-center">
+                  <Hospital className="h-10 w-10 text-red-600 animate-bounce" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-red-600 uppercase" style={{ fontFamily: "var(--font-display)" }}>
+                  🚨 CRITICAL SURVEILLANCE ALARM
+                </h2>
+                <p className="text-sm text-slate-500 font-medium mt-1">
+                  Active Patient Deterioration Recorded in Ward
+                </p>
+              </div>
+
+              {/* Patient Detail Block */}
+              <div className="rounded-2xl bg-red-50/60 border border-red-100 p-5 text-left space-y-2">
+                <div className="text-sm text-slate-700 flex justify-between">
+                  <span className="font-semibold">Patient Name:</span>
+                  <span className="font-bold text-slate-900">{activeAlarm.patient_name || "Patient Alert"}</span>
+                </div>
+                <div className="text-sm text-slate-700 flex justify-between">
+                  <span className="font-semibold">Risk score:</span>
+                  <span className="font-bold text-red-600 font-mono text-base">NEWS2 SCORE: {activeAlarm.details?.match(/\d+/)?.[0] || "Critical"}</span>
+                </div>
+                <div className="text-xs text-slate-500 font-medium leading-relaxed mt-2 pt-2 border-t border-red-100/50">
+                  <span className="font-bold text-red-700">Diagnosis Details:</span> {activeAlarm.message}
+                </div>
+              </div>
+
+              {/* Sound & vibration notice */}
+              <p className="text-[11px] text-red-500 font-bold tracking-wider uppercase animate-pulse">
+                🔊 Alarm Ringing & Device Vibrating
+              </p>
+
+              {/* Actions */}
+              <button
+                onClick={() => {
+                  const patientId = activeAlarm.patient_id;
+                  setActiveAlarm(null);
+                  navigate({ to: role === "admin" ? `/admin/alerts` : `/nurse/patient/${patientId}` as never });
+                }}
+                className="w-full py-4 text-sm font-bold text-white rounded-2xl transition hover:scale-[1.01] active:scale-95 shadow-lg"
+                style={{
+                  background: "linear-gradient(135deg, oklch(0.20 0.04 258), oklch(0.32 0.06 258))",
+                  boxShadow: "0 10px 25px oklch(0.20 0.04 258 / 0.40)"
+                }}
+              >
+                Silence Alarm & Open Patient Chart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
