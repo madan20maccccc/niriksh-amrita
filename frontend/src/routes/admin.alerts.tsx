@@ -1,10 +1,10 @@
 import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Filter, Loader2, CheckCircle2, Info, Eye } from "lucide-react";
+import { AlertTriangle, Filter, Loader2, CheckCircle2, Info, Eye, Smartphone } from "lucide-react";
 import { Card, SectionHeader } from "@/components/ui/section";
 import { StatusPill } from "@/components/ui/status-pill";
-import { getAlerts, acknowledgeAlert, explainAlert } from "@/lib/api";
+import { getAlerts, acknowledgeAlert, explainAlert, getWards } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/alerts")({ component: AlertsPage });
@@ -24,6 +24,7 @@ function AlertsPage() {
   // Acknowledge logic state
   const [ackAction, setAckAction] = useState("");
   const [ackingAlertId, setAckingAlertId] = useState<number | null>(null);
+  const [wardPhoneMap, setWardPhoneMap] = useState<Record<number, string>>({});
 
   const loadAlerts = async () => {
     try {
@@ -39,6 +40,12 @@ function AlertsPage() {
 
   useEffect(() => {
     loadAlerts();
+    // Load ward doctor phone numbers for direct SMS buttons
+    getWards().then((wards: any[]) => {
+      const map: Record<number, string> = {};
+      wards.forEach((w: any) => { if (w.doctor_phone) map[w.id] = w.doctor_phone; });
+      setWardPhoneMap(map);
+    }).catch(() => {});
   }, []);
 
   const handleExplainAlert = async (alertId: number) => {
@@ -208,6 +215,16 @@ function AlertsPage() {
                         </td>
                         <td className="px-5 py-4 text-right whitespace-nowrap">
                           <div className="flex justify-end gap-1.5">
+                            {/* Direct SMS via phone — 100% FREE */}
+                            {(a.risk_level === "RED" || a.risk_level === "ORANGE") && (
+                              <a
+                                href={`sms:${wardPhoneMap[a.ward_id] || ""}?body=${encodeURIComponent(`URGENT NirikshAmrita ALERT\nPatient: ${a.patient_name || "Patient"}\nRisk: ${a.risk_level}\n${a.message}\nImmediate review required.`)}`}
+                                className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 text-xs font-semibold inline-flex items-center gap-1"
+                                title="Send direct SMS via your phone — FREE"
+                              >
+                                <Smartphone className="h-3.5 w-3.5" /> SMS Doctor
+                              </a>
+                            )}
                             <button
                               onClick={() => handleExplainAlert(a.id)}
                               className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted inline-flex items-center gap-1"
