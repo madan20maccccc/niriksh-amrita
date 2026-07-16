@@ -1,0 +1,6 @@
+[2026-07-16T13:39:43.226838] TO: 7604932170 | MSG: NIRIKSH ALERT - CRITICAL RED
+Patient: Demo Patient
+Bed: ICU-1 | Ward: ICU Ward
+NEWS2 Score: 9
+TEST: Automated escalation system simulated successfully!
+Amrita Hospital - Immediate review required.
