@@ -315,6 +315,9 @@ function WardModal({ ward, onClose, onSave }: { ward?: any; onClose: () => void;
     ward_type: ward?.ward_type || "General",
     doctor_phone: ward?.doctor_phone || "",
     callmebot_key: ward?.callmebot_key || "",
+    senior_doctor_phone: ward?.senior_doctor_phone || "",
+    nursing_supervisor_phone: ward?.nursing_supervisor_phone || "",
+    admin_phone: ward?.admin_phone || "",
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -406,31 +409,61 @@ function WardModal({ ward, onClose, onSave }: { ward?: any; onClose: () => void;
           </label>
 
           <div className="sm:col-span-2 border-t border-border pt-3 mt-1">
-            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5" /> Ward-Specific Doctor Escalation Routing
-            </span>
-            <p className="text-[11px] text-slate-400 mt-0.5">Alerts from this ward will bypass global settings and go directly to this doctor.</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm">
-                <span className="font-medium text-foreground">Doctor Phone Number</span>
-                <input
-                  type="text"
-                  placeholder="919876543210"
-                  value={form.doctor_phone}
-                  onChange={e => setForm(f => ({ ...f, doctor_phone: e.target.value }))}
-                  className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30 text-xs font-mono"
-                />
-              </label>
-              <label className="block text-sm">
-                <span className="font-medium text-foreground">CallMeBot API Key</span>
-                <input
-                  type="text"
-                  placeholder="123456"
-                  value={form.callmebot_key}
+            <div className="flex items-center gap-1.5 mb-3">
+              <Phone className="h-3.5 w-3.5 text-red-500" />
+              <span className="text-[11px] uppercase tracking-wider text-slate-700 font-bold">Escalation Chain — Auto SMS / Telegram</span>
+            </div>
+            <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 mb-3">
+              🚨 Configure ALL 4 levels. System auto-escalates every 15 min if doctor doesn't respond!
+            </div>
+            <div className="space-y-2.5">
+              {/* Level 1 */}
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold text-red-700 uppercase tracking-wider">Level 1 — Duty Doctor (IMMEDIATE)</div>
+                  <input type="text" placeholder="919876543210" value={form.doctor_phone}
+                    onChange={e => setForm(f => ({ ...f, doctor_phone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-red-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-red-300 text-xs font-mono" />
+                </div>
+              </div>
+              {/* Level 2 */}
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Level 2 — Senior Doctor / Consultant (+15 min)</div>
+                  <input type="text" placeholder="919876543211" value={form.senior_doctor_phone}
+                    onChange={e => setForm(f => ({ ...f, senior_doctor_phone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-orange-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-orange-300 text-xs font-mono" />
+                </div>
+              </div>
+              {/* Level 3 */}
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full bg-yellow-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold text-yellow-700 uppercase tracking-wider">Level 3 — Nursing Supervisor / HOD (+30 min)</div>
+                  <input type="text" placeholder="919876543212" value={form.nursing_supervisor_phone}
+                    onChange={e => setForm(f => ({ ...f, nursing_supervisor_phone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-yellow-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300 text-xs font-mono" />
+                </div>
+              </div>
+              {/* Level 4 */}
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full bg-slate-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Level 4 — Admin Office / Medical Superintendent (+45 min)</div>
+                  <input type="text" placeholder="919876543213" value={form.admin_phone}
+                    onChange={e => setForm(f => ({ ...f, admin_phone: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300 text-xs font-mono" />
+                </div>
+              </div>
+              {/* CallMeBot WhatsApp key */}
+              <div className="pt-1 border-t border-border">
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">CallMeBot WhatsApp API Key (Optional)</div>
+                <input type="text" placeholder="123456" value={form.callmebot_key}
                   onChange={e => setForm(f => ({ ...f, callmebot_key: e.target.value }))}
-                  className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30 text-xs font-mono"
-                />
-              </label>
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-xs font-mono" />
+              </div>
             </div>
           </div>
 

@@ -83,8 +83,13 @@ class Ward(Base):
     capacity = Column(Integer, default=20)
     ward_type = Column(String, default="General")  # ICU, CCU, General, Pediatric, etc.
     head_nurse_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    doctor_phone = Column(String, nullable=True)      # Ward doctor's personal phone
-    callmebot_key = Column(String, nullable=True)     # Doctor's specific callmebot apikey
+    doctor_phone = Column(String, nullable=True)              # Level 1: Duty Doctor
+    callmebot_key = Column(String, nullable=True)             # Doctor's WhatsApp apikey
+
+    # ── Escalation Chain (PDF Protocol) ─────────────────────
+    senior_doctor_phone = Column(String, nullable=True)       # Level 2: Senior Doctor / Consultant
+    nursing_supervisor_phone = Column(String, nullable=True)  # Level 3: Nursing Supervisor / HOD
+    admin_phone = Column(String, nullable=True)               # Level 4: Admin Office / Medical Superintendent
 
     patients = relationship("Patient", back_populates="ward")
 
@@ -221,6 +226,12 @@ class Alert(Base):
     # Did closure agent act?
     closure_checked_at = Column(DateTime(timezone=True), nullable=True)
     re_escalated = Column(Boolean, default=False)
+
+    # ── Escalation Chain Tracking (PDF Protocol) ─────────────────────
+    # Level 1 = Duty Doctor, 2 = Senior Doctor, 3 = Nursing Supervisor, 4 = Admin Office
+    escalation_level = Column(Integer, default=1)         # current level reached
+    escalation_count = Column(Integer, default=0)         # how many SMS cycles sent
+    last_escalated_at = Column(DateTime(timezone=True), nullable=True)  # last SMS time
 
     # Relationships
     patient = relationship("Patient", back_populates="alerts")

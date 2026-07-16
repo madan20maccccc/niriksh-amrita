@@ -49,12 +49,20 @@ def shift_handover_job():
         db.close()
 
 def sms_escalation_job():
-    """Every 15 minutes: send automatic SMS & Telegram to ward doctors for all unacknowledged HIGH RISK patients."""
+    """
+    Every 15 minutes: Smart 4-Level Escalation Chain (PDF Protocol)
+    ─────────────────────────────────────────────────────────────────
+    Level 1 (0-15 min):  Duty Doctor — immediate alert
+    Level 2 (15-30 min): Senior Doctor / Consultant — if no response
+    Level 3 (30-45 min): Nursing Supervisor / HOD — if still no response
+    Level 4 (45+ min):   Admin Office / Medical Superintendent — final escalation
+    """
     from database import SessionLocal
     from agents.sms_notifier import send_sms_alert
     from agents.telegram_notifier import send_telegram_alert
     import models as m
-    
+    from datetime import datetime, timezone, timedelta
+
     db = SessionLocal()
     try:
         # Find all active (unacknowledged) RED or ORANGE alerts
@@ -70,64 +78,115 @@ def sms_escalation_job():
         if not active_alerts:
             return
 
-        print(f"[Escalation Scheduler] Found {len(active_alerts)} unacknowledged high-risk alerts. Sending re-alerts...")
+        now = datetime.now(timezone.utc)
+        print(f"[Escalation Scheduler] {len(active_alerts)} unacknowledged HIGH-RISK alert(s). Running escalation chain...")
 
-        # ── Send Telegram Alerts (Free, unlimited) ──
         for alert in active_alerts:
             patient = db.query(m.Patient).filter(m.Patient.id == alert.patient_id).first()
             if not patient:
                 continue
             ward = db.query(m.Ward).filter(m.Ward.id == patient.ward_id).first()
-            
+            if not ward:
+                continue
+
+            # ── Calculate how long this alert has been active ──
+            alert_age_mins = (now - alert.created_at.replace(tzinfo=timezone.utc)).total_seconds() / 60
+
+            # ── Determine Escalation Level based on time ──
+            # 0-15 min → Level 1 (Duty Doctor)
+            # 15-30 min → Level 2 (Senior Doctor)
+            # 30-45 min → Level 3 (Nursing Supervisor)
+            # 45+ min → Level 4 (Admin Office)
+            if alert_age_mins < 15:
+                target_level = 1
+            elif alert_age_mins < 30:
+                target_level = 2
+            elif alert_age_mins < 45:
+                target_level = 3
+            else:
+                target_level = 4
+
+            # ── Choose Who to Notify ──
+            escalation_contacts = {
+                1: {"phone": ward.doctor_phone,             "role": "Duty Doctor",              "emoji": "🚨"},
+                2: {"phone": ward.senior_doctor_phone,      "role": "Senior Doctor/Consultant", "emoji": "⚠️"},
+                3: {"phone": ward.nursing_supervisor_phone, "role": "Nursing Supervisor/HOD",   "emoji": "🔴"},
+                4: {"phone": ward.admin_phone,              "role": "Admin Office/Med Supt",    "emoji": "🆘"},
+            }
+
+            # Notify all levels up to current level (so everyone in chain knows)
+            levels_to_notify = list(range(1, target_level + 1))
+
+            # Only notify if enough time has passed since last escalation for this alert
+            if alert.last_escalated_at:
+                mins_since_last = (now - alert.last_escalated_at.replace(tzinfo=timezone.utc)).total_seconds() / 60
+                if mins_since_last < 14:  # 14 min buffer to avoid double-sending
+                    continue
+
+            # ── Send Telegram (Free, All Levels) ──
+            escalation_label = f"Level {target_level}" if target_level == 1 else f"ESCALATION Level {target_level}"
             send_telegram_alert(
                 patient_name=patient.full_name,
                 bed_number=patient.bed_number,
                 news2_score=alert.news2_score or 0,
                 risk_level=alert.risk_level.value,
-                details=f"RE-ALERT: Patient remains unacknowledged. {alert.message}",
-                ward_name=ward.name if ward else "Unknown Ward"
+                details=(
+                    f"⏱ {escalation_label} — Patient unacknowledged for {int(alert_age_mins)} minutes.\n"
+                    f"Escalating to: {escalation_contacts[target_level]['role']}"
+                ),
+                ward_name=ward.name
             )
 
-        # ── Send Carrier SMS Alerts ──
-        sent_wards = set()
-        for alert in active_alerts:
-            patient = db.query(m.Patient).filter(m.Patient.id == alert.patient_id).first()
-            if not patient:
-                continue
+            # ── Send SMS to Each Level ──
+            for level in levels_to_notify:
+                contact = escalation_contacts[level]
+                phone = contact["phone"]
+                if not phone:
+                    continue
 
-            ward = db.query(m.Ward).filter(m.Ward.id == patient.ward_id).first()
-            if not ward or not ward.doctor_phone:
-                continue
+                # Skip re-notifying lower levels after first cycle
+                if level < target_level and alert.escalation_count > 0:
+                    continue
 
-            # Only send one SMS per ward to avoid spam
-            if ward.id in sent_wards:
-                continue
-            sent_wards.add(ward.id)
+                # Build level-appropriate message
+                if level == target_level:
+                    prefix = f"{contact['emoji']} URGENT - ACTION REQUIRED"
+                    suffix = "Please respond or escalate IMMEDIATELY."
+                else:
+                    prefix = f"{contact['emoji']} FYI - ESCALATION IN PROGRESS"
+                    suffix = f"Alert escalated to {escalation_contacts[target_level]['role']}."
 
-            # Count total high-risk patients in this ward
-            ward_alert_count = sum(
-                1 for a in active_alerts
-                if db.query(m.Patient).filter(m.Patient.id == a.patient_id, m.Patient.ward_id == ward.id).first()
-            )
+                message_body = (
+                    f"{prefix}\n"
+                    f"Patient: {patient.full_name} | Bed: {patient.bed_number}\n"
+                    f"Ward: {ward.name} | Risk: {alert.risk_level.value}\n"
+                    f"NEWS2: {alert.news2_score or 'N/A'} | Unacknowledged: {int(alert_age_mins)} min\n"
+                    f"Alert: {alert.message[:80]}\n"
+                    f"{suffix}\n"
+                    f"— NirikshAmrita Hospital Alert System"
+                )
 
-            details = (
-                f"{ward_alert_count} unacknowledged patient(s) need immediate review. "
-                f"Latest: {patient.full_name}, {alert.message[:80]}"
-            )
+                result = send_sms_alert(
+                    to_phone=phone,
+                    patient_name=patient.full_name,
+                    bed_number=patient.bed_number,
+                    news2_score=alert.news2_score or 0,
+                    risk_level=alert.risk_level.value,
+                    details=message_body,
+                    ward_name=ward.name,
+                )
+                print(f"[Escalation L{level}] {contact['role']} ({phone}): {result.get('message', 'sent')}")
 
-            result = send_sms_alert(
-                to_phone=ward.doctor_phone,
-                patient_name=patient.full_name,
-                bed_number=patient.bed_number,
-                news2_score=alert.news2_score or 0,
-                risk_level=alert.risk_level.value,
-                details=details,
-                ward_name=ward.name,
-            )
-            print(f"[SMS Escalation] Ward '{ward.name}' -> {ward.doctor_phone}: {result.get('message', '')}")
+            # ── Update escalation tracking on the alert ──
+            alert.escalation_level = target_level
+            alert.escalation_count = (alert.escalation_count or 0) + 1
+            alert.last_escalated_at = now
+            alert.re_escalated = True
+            db.commit()
 
     except Exception as e:
         print(f"[Escalation Scheduler] ERROR: {e}")
+        import traceback; traceback.print_exc()
     finally:
         db.close()
 

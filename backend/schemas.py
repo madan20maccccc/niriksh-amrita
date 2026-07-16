@@ -56,8 +56,11 @@ class WardCreate(BaseModel):
     floor: int
     capacity: int = 20
     ward_type: str = "General"
-    doctor_phone: Optional[str] = None
+    doctor_phone: Optional[str] = None             # Level 1: Duty Doctor
     callmebot_key: Optional[str] = None
+    senior_doctor_phone: Optional[str] = None       # Level 2: Senior Doctor / Consultant
+    nursing_supervisor_phone: Optional[str] = None  # Level 3: Nursing Supervisor / HOD
+    admin_phone: Optional[str] = None               # Level 4: Admin Office / Med Supt
 
 class WardOut(BaseModel):
     id: int
@@ -67,6 +70,9 @@ class WardOut(BaseModel):
     ward_type: str
     doctor_phone: Optional[str] = None
     callmebot_key: Optional[str] = None
+    senior_doctor_phone: Optional[str] = None
+    nursing_supervisor_phone: Optional[str] = None
+    admin_phone: Optional[str] = None
     class Config:
         from_attributes = True
 
