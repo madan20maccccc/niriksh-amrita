@@ -59,15 +59,35 @@ def send_telegram_alert(
     custom_chat_id: str = "",
 ) -> dict:
     """Send a Telegram alert message. 100% FREE, unlimited."""
-    if not TELEGRAM_BOT_TOKEN:
+    # Re-read keys dynamically from .env so they update immediately
+    bot_token = ""
+    chat_ids_str = ""
+    try:
+        env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as env_f:
+                for line in env_f:
+                    if line.startswith("TELEGRAM_BOT_TOKEN="):
+                        bot_token = line.split("=", 1)[1].strip()
+                    elif line.startswith("TELEGRAM_CHAT_IDS="):
+                        chat_ids_str = line.split("=", 1)[1].strip()
+    except Exception:
+        pass
+
+    if not bot_token:
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
+    if not chat_ids_str:
+        chat_ids_str = os.getenv("TELEGRAM_CHAT_IDS", TELEGRAM_CHAT_IDS)
+
+    if not bot_token:
         return {"success": False, "message": "Telegram bot token not configured."}
 
     # Build recipient list
     recipients = []
     if custom_chat_id:
         recipients.append(custom_chat_id)
-    if TELEGRAM_CHAT_IDS:
-        recipients.extend([cid.strip() for cid in TELEGRAM_CHAT_IDS.split(",") if cid.strip()])
+    if chat_ids_str:
+        recipients.extend([cid.strip() for cid in chat_ids_str.split(",") if cid.strip()])
     
     if not recipients:
         return {"success": False, "message": "No Telegram chat IDs configured. Doctor must open the bot link and click START."}
@@ -90,7 +110,7 @@ def send_telegram_alert(
     last_error = ""
     
     for chat_id in set(recipients):
-        result = _send_message(chat_id, text)
+        result = _send_message(chat_id, text, bot_token)
         if result.get("success"):
             sent_count += 1
         else:
