@@ -36,8 +36,23 @@ def send_whatsapp_alert(
     Send a real WhatsApp message to the duty doctor/nurse via CallMeBot.
     Returns a dict with success: True/False and message.
     """
-    phone = custom_phone or WHATSAPP_PHONE
-    apikey = custom_apikey or WHATSAPP_APIKEY
+    # Re-read keys dynamically from .env file directly so changes take effect without restart
+    wp_phone = ""
+    wp_apikey = ""
+    try:
+        env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as env_f:
+                for line in env_f:
+                    if line.startswith("WHATSAPP_PHONE="):
+                        wp_phone = line.split("=", 1)[1].strip()
+                    elif line.startswith("WHATSAPP_APIKEY="):
+                        wp_apikey = line.split("=", 1)[1].strip()
+    except Exception:
+        pass
+
+    phone = custom_phone or wp_phone or WHATSAPP_PHONE
+    apikey = custom_apikey or wp_apikey or WHATSAPP_APIKEY
 
     if not phone or not apikey:
         return {
