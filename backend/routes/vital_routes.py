@@ -356,9 +356,32 @@ async def extract_vitals_ocr(
         Do not output any markdown formatting, code blocks (like ```json), or explanatory text. Just raw JSON.
         """
         
-        # Using supported generative flash model
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content([prompt, image_part])
+        # Using robust model loop to avoid 404/429 failures
+        models_to_try = [
+            "gemini-2.0-flash",
+            "gemini-flash-latest",
+            "gemini-pro-latest",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro"
+        ]
+        
+        response = None
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content([prompt, image_part])
+                break
+            except Exception as e:
+                print(f"[OCR] Model {model_name} failed: {e}. Trying next...")
+                last_error = e
+                continue
+                
+        if response is None:
+            raise Exception(f"All generative models failed. Last error: {last_error}")
+            
         text = response.text.strip()
         
         # Clean up markdown response formatting if present

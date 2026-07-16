@@ -35,7 +35,15 @@ def translate_sbar(sbar: dict, target_lang: str) -> dict:
         import time
         genai.configure(api_key=GEMINI_API_KEY)
 
-        models_to_try = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.0-flash"]
+        models_to_try = [
+            "gemini-2.0-flash",
+            "gemini-flash-latest",
+            "gemini-pro-latest",
+            "gemini-2.5-flash", 
+            "gemini-2.5-flash-lite", 
+            "gemini-1.5-flash", 
+            "gemini-1.5-pro"
+        ]
 
         # Sanitize dictionary values (convert datetime or other non-serializable objects to string)
         serialized_sbar = {}
@@ -85,13 +93,8 @@ Only output the JSON translation, no extra commentary."""
                     "translated_by": f"gemini ({model_name})"
                 }
             except Exception as e:
-                err_str = str(e)
-                if "429" in err_str or "quota" in err_str.lower():
-                    print(f"[Multilingual] {model_name} quota exceeded, trying next...")
-                    time.sleep(2)
-                    continue
-                else:
-                    raise
+                print(f"[Multilingual] Model {model_name} failed: {e}. Trying next...")
+                continue
 
         # All models exceeded quota — return English with notice
         return {

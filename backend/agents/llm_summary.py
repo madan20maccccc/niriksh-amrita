@@ -78,7 +78,15 @@ def generate_sbar_gemini(patient: dict, vitals: dict, ews: dict, alerts: list, t
         genai.configure(api_key=GEMINI_API_KEY)
 
         # Try models in order of free-tier availability
-        models_to_try = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "gemini-2.0-flash"]
+        models_to_try = [
+            "gemini-2.0-flash",
+            "gemini-flash-latest",
+            "gemini-pro-latest",
+            "gemini-2.5-flash", 
+            "gemini-2.5-flash-lite", 
+            "gemini-1.5-flash", 
+            "gemini-1.5-pro"
+        ]
         last_error = None
         for model_name in models_to_try:
             try:
@@ -96,14 +104,9 @@ def generate_sbar_gemini(patient: dict, vitals: dict, ews: dict, alerts: list, t
                 sbar = json.loads(text)
                 return {**sbar, "generated_by": f"gemini ({model_name})"}
             except Exception as e:
-                err_str = str(e)
-                if "429" in err_str or "quota" in err_str.lower():
-                    print(f"[LLM Agent] {model_name} quota exceeded, trying next model...")
-                    last_error = e
-                    time.sleep(2)
-                    continue
-                else:
-                    raise
+                print(f"[LLM Agent] Model {model_name} failed: {e}. Trying next...")
+                last_error = e
+                continue
 
         # All models quota exceeded — use template
         print(f"[LLM Agent] All Gemini models quota exceeded, falling back to template SBAR")
