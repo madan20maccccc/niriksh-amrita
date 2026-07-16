@@ -238,6 +238,54 @@ function SettingsPage() {
         </div>
       </div>
 
+      {/* ─── AUTO SMS STATUS BANNER ─────────────────────────────── */}
+      <div className="rounded-3xl border-2 p-6 space-y-4"
+        style={{ background: "linear-gradient(135deg, oklch(0.97 0.02 148), oklch(0.96 0.02 155))", borderColor: "oklch(0.78 0.14 148)" }}>
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, oklch(0.45 0.20 148), oklch(0.50 0.18 155))" }}>
+            <Smartphone className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="text-base font-bold text-slate-900">Automatic SMS to Doctor's Phone — HOW IT WORKS</div>
+            <div className="text-sm text-slate-600 mt-0.5">When a nurse records critical vitals, SMS fires automatically. Doctor receives it in native Messages app — beep + vibration.</div>
+          </div>
+        </div>
+
+        {/* How it works steps */}
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[
+            { step: "1", icon: "🌐", title: "Sign up at fast2sms.com", desc: "FREE • No credit card • Takes 2 minutes • Indian website" },
+            { step: "2", icon: "🔑", title: "Copy your API Key", desc: "Dashboard → Dev API → Copy Authorization key" },
+            { step: "3", icon: "✅", title: "Paste below & Save", desc: "SMS fires AUTOMATICALLY. No clicking needed ever again!" },
+          ].map(s => (
+            <div key={s.step} className="rounded-2xl bg-white/70 border border-emerald-200 p-3.5 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                  style={{ background: "oklch(0.45 0.20 148)" }}>{s.step}</span>
+                <div className="text-sm font-bold text-slate-800">{s.icon} {s.title}</div>
+              </div>
+              <div className="text-xs text-slate-600 pl-8">{s.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl bg-emerald-900/10 border border-emerald-300 p-3 flex items-start gap-2 text-xs text-emerald-900 font-medium">
+          <Zap className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-700" />
+          <span>
+            <strong>Once configured:</strong> SMS fires immediately when RED/ORANGE vitals are submitted.
+            Also fires <strong>automatically every 15 minutes</strong> until the doctor acknowledges the alert.
+            Doctor does NOT need any app — just their regular phone number!
+          </span>
+        </div>
+
+        <a href="https://fast2sms.com" target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white rounded-2xl transition hover:scale-[1.01] active:scale-95"
+          style={{ background: "linear-gradient(135deg, oklch(0.45 0.20 148), oklch(0.50 0.18 155))" }}>
+          Open fast2sms.com to sign up FREE →
+        </a>
+      </div>
+
       {/* ─── GEMINI API KEY ───────────────────────────────────── */}
       <Section icon={<Key className="h-4.5 w-4.5" />} title="Gemini AI API Key" badge="Required for OCR & SBAR" badgeColor="amber">
         <div className="space-y-4">
