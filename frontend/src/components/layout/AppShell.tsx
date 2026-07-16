@@ -1,11 +1,11 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, useRef, type ComponentType } from "react";
-import { Bell, ChevronLeft, LogOut, Menu, Search, User } from "lucide-react";
+import { Bell, ChevronLeft, LogOut, Menu, Search, Smartphone, User } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { clearSession, getSession, type Role } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getAlerts } from "@/lib/api";
+import { getAlerts, getWards } from "@/lib/api";
 
 export interface NavItem {
   to: string;
@@ -31,6 +31,7 @@ export function AppShell({
   const isFirstLoadRef = useRef<boolean>(true);
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [activeAlarm, setActiveAlarm] = useState<any>(null);
+  const [doctorPhone, setDoctorPhone] = useState<string>("");
   const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -143,6 +144,14 @@ export function AppShell({
 
         if (newCriticalAlert) {
           setActiveAlarm(newCriticalAlert);
+          // Fetch wards to find doctor phone for direct SMS button
+          try {
+            const wards = await getWards();
+            if (wards && wards.length > 0) {
+              const firstWardWithPhone = wards.find((w: any) => w.doctor_phone);
+              if (firstWardWithPhone) setDoctorPhone(firstWardWithPhone.doctor_phone);
+            }
+          } catch { /* ignore */ }
         }
       } catch (err) {
         console.error("Failed to fetch live alerts:", err);
@@ -310,20 +319,44 @@ export function AppShell({
               </p>
 
               {/* Actions */}
-              <button
-                onClick={() => {
-                  const patientId = activeAlarm.patient_id;
-                  setActiveAlarm(null);
-                  navigate({ to: role === "admin" ? `/admin/alerts` : `/nurse/patient/${patientId}` as never });
-                }}
-                className="w-full py-4 text-sm font-bold text-white rounded-2xl transition hover:scale-[1.01] active:scale-95 shadow-lg"
-                style={{
-                  background: "linear-gradient(135deg, oklch(0.20 0.04 258), oklch(0.32 0.06 258))",
-                  boxShadow: "0 10px 25px oklch(0.20 0.04 258 / 0.40)"
-                }}
-              >
-                Silence Alarm & Open Patient Chart
-              </button>
+              <div className="space-y-2.5">
+                {/* Direct SMS button — opens native Messages app, 100% FREE */}
+                {doctorPhone && (
+                  <a
+                    href={`sms:${doctorPhone}?body=${encodeURIComponent(
+                      `URGENT - NirikshAmrita ALERT\nPatient: ${activeAlarm.patient_name || "Patient"}\nNEWS2: ${activeAlarm.details?.match(/\d+/)?.[0] || "Critical"} - RED RISK\n${activeAlarm.message}\nImmediate review required.`
+                    )}`}
+                    className="flex items-center justify-center gap-2.5 w-full py-3.5 text-sm font-bold text-white rounded-2xl transition hover:scale-[1.01] active:scale-95 shadow-lg"
+                    style={{
+                      background: "linear-gradient(135deg, oklch(0.45 0.20 148), oklch(0.50 0.18 155))",
+                      boxShadow: "0 8px 20px oklch(0.45 0.20 148 / 0.40)"
+                    }}
+                    onClick={() => {
+                      // Vibrate on click too
+                      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    }}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    Send Emergency SMS via Phone
+                    <span className="text-[10px] font-medium opacity-80 bg-white/20 rounded px-1.5 py-0.5">FREE</span>
+                  </a>
+                )}
+
+                <button
+                  onClick={() => {
+                    const patientId = activeAlarm.patient_id;
+                    setActiveAlarm(null);
+                    navigate({ to: role === "admin" ? `/admin/alerts` : `/nurse/patient/${patientId}` as never });
+                  }}
+                  className="w-full py-3.5 text-sm font-bold text-white rounded-2xl transition hover:scale-[1.01] active:scale-95 shadow-lg"
+                  style={{
+                    background: "linear-gradient(135deg, oklch(0.20 0.04 258), oklch(0.32 0.06 258))",
+                    boxShadow: "0 10px 25px oklch(0.20 0.04 258 / 0.40)"
+                  }}
+                >
+                  Silence Alarm & Open Patient Chart
+                </button>
+              </div>
             </div>
           </div>
         </div>
