@@ -17,9 +17,7 @@ from agents.risk_classifier import classify_risk
 from agents.escalation import run_escalation
 from agents.llm_summary import generate_sbar_gemini
 from agents.audit import audit_vitals_entered, audit_alert_created, audit_sbar_generated
-from agents.whatsapp_notifier import send_whatsapp_alert
-from agents.sms_notifier import send_sms_alert
-from agents.telegram_notifier import send_telegram_alert
+from agents.email_notifier import send_email_alert
 
 router = APIRouter()
 
@@ -149,48 +147,22 @@ async def enter_vitals(
     for alert in created_alerts:
         audit_alert_created(db, patient.id, alert.id, alert.risk_level.value, alert.alert_type)
 
-    # ── Agent 15: Real WhatsApp Alert (RED / ORANGE) ─────────
+    # ── Agent 15: Real Email Alert (RED / ORANGE) ─────────
     if risk_level.value in ["RED", "ORANGE"] and created_alerts:
         ward = db.query(models.Ward).filter(models.Ward.id == patient.ward_id).first()
         alert_msg = created_alerts[0].message if created_alerts else f"NEWS2 Score {ews_data['total_score']}"
         
-        custom_phone = ward.doctor_phone if (ward and ward.doctor_phone) else ""
-        custom_key = ward.callmebot_key if (ward and ward.callmebot_key) else ""
+        doctor_email = ward.doctor_email if (ward and hasattr(ward, 'doctor_email') and ward.doctor_email) else "madan.m200607@gmail.com"
         
         background_tasks.add_task(
-            send_whatsapp_alert,
+            send_email_alert,
             patient.full_name,
             patient.bed_number,
             ews_data["total_score"],
             risk_level.value,
             alert_msg,
             ward.name if ward else "Unknown Ward",
-            custom_phone,
-            custom_key
-        )
-
-        # ── Agent 16: Real Carrier SMS Alert ───────────────────
-        if custom_phone:
-            background_tasks.add_task(
-                send_sms_alert,
-                custom_phone,
-                patient.full_name,
-                patient.bed_number,
-                ews_data["total_score"],
-                risk_level.value,
-                alert_msg,
-                ward.name if ward else "Unknown Ward",
-            )
-
-        # ── Agent 17: FREE Telegram Alert ─────────────────────
-        background_tasks.add_task(
-            send_telegram_alert,
-            patient.full_name,
-            patient.bed_number,
-            ews_data["total_score"],
-            risk_level.value,
-            alert_msg,
-            ward.name if ward else "Unknown Ward",
+            doctor_email
         )
 
     # ── Agent 12 (WebSocket): Broadcast to dashboard ─────────────
@@ -313,27 +285,76 @@ async def extract_vitals_ocr(
     current_user: models.User = Depends(get_current_user)
 ):
     """
-    Real-time AI vital monitor OCR screen parser using Gemini 1.5 Flash Vision.
-    Extracts parameters directly from bedside screen images.
+    Real-time AI vital monitor OCR screen parser using Gemini, OpenAI, or Hugging Face.
+    Provides transparent failover: Gemini -> OpenAI -> Hugging Face.
     """
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=500, detail="Gemini API Key is not configured in backend.")
-        
+    # 1. Read configs directly from .env file (hot-reload support)
+    provider = "gemini"
+    hf_token = ""
+    gemini_key = ""
+    openai_key = ""
     try:
-        import google.generativeai as genai
+        env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as env_f:
+                for line in env_f:
+                    if line.startswith("AI_PROVIDER="):
+                        provider = line.split("=", 1)[1].strip().lower()
+                    elif line.startswith("HUGGINGFACE_API_KEY="):
+                        hf_token = line.split("=", 1)[1].strip()
+                    elif line.startswith("GEMINI_API_KEY="):
+                        gemini_key = line.split("=", 1)[1].strip()
+                    elif line.startswith("OPENAI_API_KEY="):
+                        openai_key = line.split("=", 1)[1].strip()
+    except Exception:
+        pass
         
-        image_bytes = await file.read()
+    # Fallback to system environment variables
+    if not provider:
+        provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    if not hf_token:
+        hf_token = os.getenv("HF_TOKEN", "") or os.getenv("HUGGINGFACE_API_KEY", "")
+    if not hf_token:
+        hf_token = "hf_placeholder"
+    if not gemini_key:
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if not openai_key:
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+
+    is_broken_gemini = not gemini_key or len(gemini_key) < 20
+
+    # Read uploaded file bytes
+    image_bytes = await file.read()
+
+    # Compress image to prevent API timeouts and payload limits (resizes to max 1000px, JPEG quality 80)
+    try:
+        import io
+        from PIL import Image
+        img = Image.open(io.BytesIO(image_bytes))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.thumbnail((1000, 1000), Image.Resampling.LANCZOS)
+        out_io = io.BytesIO()
+        img.save(out_io, format="JPEG", quality=80)
+        image_bytes = out_io.getvalue()
+        print(f"[OCR Compression] Image compressed from original to {len(image_bytes)} bytes")
+    except Exception as compress_err:
+        print(f"[OCR Compression] Image compression failed: {compress_err}. Using original image.")
+
+
+    # Helper function to run OpenAI OCR
+    def _run_openai_ocr(img_data: bytes, content_type: str, token: str) -> dict:
+        import base64
+        import urllib.request
+        import json
+        import ssl
         
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        image_part = {
-            "mime_type": file.content_type or "image/jpeg",
-            "data": image_bytes
-        }
-        
+        base64_image = base64.b64encode(img_data).decode("utf-8")
         prompt = """
-        You are a highly accurate clinical OCR agent for hospital ICU and ward vital monitors.
-        Analyze this vital monitor screen image and extract the numerical values for:
+        You are a highly accurate clinical OCR agent.
+        Analyze the image, which can be a patient bedside vital monitor screen, a hand-written or printed vitals observation sheet, a clinical flow chart, or a patient report.
+
+        Extract the numerical values for:
         1. Systolic Blood Pressure (systolic_bp)
         2. Diastolic Blood Pressure (diastolic_bp)
         3. Heart Rate / Pulse (heart_rate)
@@ -341,8 +362,10 @@ async def extract_vitals_ocr(
         5. Respiratory Rate (respiratory_rate)
         6. Temperature in Celsius (temperature)
 
-        Please look at the labels (e.g. SpO2, HR, PR, NIBP, TEMP, RR) and extract the corresponding main numbers.
-        If the temperature is in Fahrenheit (e.g. 98.6), convert it to Celsius (37.0).
+        CRITICAL INSTRUCTIONS FOR SHEETS / TABLES:
+        - If the image contains a table with multiple rows of historical records (e.g. an observation sheet with multiple dates/times), you MUST extract the values from the LATEST row (the bottom-most filled row or the row with the most recent timestamp).
+        - If a value is missing or not readable, set it to null.
+        - If the temperature is in Fahrenheit (e.g. 98.6), convert it to Celsius (37.0).
 
         Return ONLY a raw valid JSON object with the following fields:
         {
@@ -356,7 +379,177 @@ async def extract_vitals_ocr(
         Do not output any markdown formatting, code blocks (like ```json), or explanatory text. Just raw JSON.
         """
         
-        # Using robust model loop to avoid 404/429 failures
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{content_type};base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "response_format": {"type": "json_object"}
+        }
+        
+        context = ssl._create_unverified_context()
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers
+        )
+        
+        print("[OCR] Querying OpenAI Model (gpt-4o-mini)...")
+        with urllib.request.urlopen(req, context=context, timeout=25) as response:
+            body = response.read().decode("utf-8")
+            res_json = json.loads(body)
+            choices = res_json.get("choices", [])
+            if len(choices) > 0:
+                text = choices[0].get("message", {}).get("content", "").strip()
+            else:
+                raise Exception("Invalid API response format from OpenAI.")
+            
+            res = json.loads(text)
+            res["parsed_by"] = "OpenAI ChatGPT (gpt-4o-mini)"
+            return res
+
+    # Helper function to run Hugging Face OCR
+    def _run_hf_ocr(img_data: bytes, content_type: str, token: str) -> dict:
+        import base64
+        import urllib.request
+        import json
+        import ssl
+        
+        base64_image = base64.b64encode(img_data).decode("utf-8")
+        prompt = """
+        You are a highly accurate clinical OCR agent.
+        Analyze the image, which can be a patient bedside vital monitor screen, a hand-written or printed vitals observation sheet, a clinical flow chart, or a patient report.
+
+        Extract the numerical values for:
+        1. Systolic Blood Pressure (systolic_bp)
+        2. Diastolic Blood Pressure (diastolic_bp)
+        3. Heart Rate / Pulse (heart_rate)
+        4. Oxygen Saturation (spo2)
+        5. Respiratory Rate (respiratory_rate)
+        6. Temperature in Celsius (temperature)
+
+        CRITICAL INSTRUCTIONS FOR SHEETS / TABLES:
+        - If the image contains a table with multiple rows of historical records (e.g. an observation sheet with multiple dates/times), you MUST extract the values from the LATEST row (the bottom-most filled row or the row with the most recent timestamp).
+        - If a value is missing or not readable, set it to null.
+        - If the temperature is in Fahrenheit (e.g. 98.6), convert it to Celsius (37.0).
+
+        Return ONLY a raw valid JSON object with the following fields:
+        {
+          "systolic_bp": number or null,
+          "diastolic_bp": number or null,
+          "heart_rate": number or null,
+          "spo2": number or null,
+          "respiratory_rate": number or null,
+          "temperature": number or null
+        }
+        Do not output any markdown formatting, code blocks (like ```json), or explanatory text. Just raw JSON.
+        """
+        
+        url = "https://router.huggingface.co/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "Qwen/Qwen2.5-VL-72B-Instruct",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{content_type};base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        context = ssl._create_unverified_context()
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers
+        )
+        
+        print("[OCR Fallback] Querying Hugging Face Vision Model (Qwen2.5-VL) via Router...")
+        with urllib.request.urlopen(req, context=context, timeout=25) as response:
+            body = response.read().decode("utf-8")
+            res_json = json.loads(body)
+            choices = res_json.get("choices", [])
+            if len(choices) > 0:
+                text = choices[0].get("message", {}).get("content", "").strip()
+            else:
+                raise Exception("Invalid API response format from Hugging Face Vision.")
+            
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            text = text.strip()
+            res = json.loads(text)
+            res["parsed_by"] = "Hugging Face (Qwen2.5-VL-72B)"
+            return res
+
+    # Helper function to run Google Gemini OCR
+    def _run_gemini_ocr(img_data: bytes, content_type: str, key: str) -> dict:
+        import google.generativeai as genai
+        import json
+        genai.configure(api_key=key)
+        
+        image_part = {
+            "mime_type": content_type,
+            "data": img_data
+        }
+        
+        prompt = """
+        You are a highly accurate clinical OCR agent.
+        Analyze the image, which can be a patient bedside vital monitor screen, a hand-written or printed vitals observation sheet, a clinical flow chart, or a patient report.
+
+        Extract the numerical values for:
+        1. Systolic Blood Pressure (systolic_bp)
+        2. Diastolic Blood Pressure (diastolic_bp)
+        3. Heart Rate / Pulse (heart_rate)
+        4. Oxygen Saturation (spo2)
+        5. Respiratory Rate (respiratory_rate)
+        6. Temperature in Celsius (temperature)
+
+        CRITICAL INSTRUCTIONS FOR SHEETS / TABLES:
+        - If the image contains a table with multiple rows of historical records (e.g. an observation sheet with multiple dates/times), you MUST extract the values from the LATEST row (the bottom-most filled row or the row with the most recent timestamp).
+        - If a value is missing or not readable, set it to null.
+        - If the temperature is in Fahrenheit (e.g. 98.6), convert it to Celsius (37.0).
+
+        Return ONLY a raw valid JSON object with the following fields:
+        {
+          "systolic_bp": number or null,
+          "diastolic_bp": number or null,
+          "heart_rate": number or null,
+          "spo2": number or null,
+          "respiratory_rate": number or null,
+          "temperature": number or null
+        }
+        Do not output any markdown formatting, code blocks (like ```json), or explanatory text. Just raw JSON.
+        """
+        
         models_to_try = [
             "gemini-2.0-flash",
             "gemini-flash-latest",
@@ -368,7 +561,7 @@ async def extract_vitals_ocr(
         ]
         
         response = None
-        last_error = None
+        last_err = None
         for model_name in models_to_try:
             try:
                 model = genai.GenerativeModel(model_name)
@@ -376,23 +569,71 @@ async def extract_vitals_ocr(
                 break
             except Exception as e:
                 print(f"[OCR] Model {model_name} failed: {e}. Trying next...")
-                last_error = e
+                last_err = e
                 continue
                 
         if response is None:
-            raise Exception(f"All generative models failed. Last error: {last_error}")
+            raise Exception(f"All generative models failed. Last error: {last_err}")
             
         text = response.text.strip()
-        
-        # Clean up markdown response formatting if present
         if text.startswith("```"):
             text = text.split("```")[1]
             if text.startswith("json"):
                 text = text[4:]
         text = text.strip()
-        
-        parsed = json.loads(text)
-        return parsed
-    except Exception as e:
-        print(f"[OCR Backend Error] {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to parse monitor image: {str(e)}")
+        res = json.loads(text)
+        res["parsed_by"] = "Google Gemini Flash"
+        return res
+
+    # 2. Main execution flow with cascade failover
+    # Order of attempt: Active Provider -> Gemini -> OpenAI -> Hugging Face
+    errors = []
+    
+    # Try 1: Try active provider first
+    if provider == "openai" and openai_key:
+        try:
+            return _run_openai_ocr(image_bytes, file.content_type or "image/jpeg", openai_key)
+        except Exception as e:
+            errors.append(f"OpenAI error: {e}")
+            
+    elif provider == "huggingface" and hf_token:
+        try:
+            return _run_hf_ocr(image_bytes, file.content_type or "image/jpeg", hf_token)
+        except Exception as e:
+            errors.append(f"Hugging Face error: {e}")
+            
+    else: # Default Gemini
+        if gemini_key and not is_broken_gemini:
+            try:
+                return _run_gemini_ocr(image_bytes, file.content_type or "image/jpeg", gemini_key)
+            except Exception as e:
+                errors.append(f"Gemini error: {e}")
+
+    # Try 2: Failover to OpenAI if available
+    if openai_key:
+        try:
+            return _run_openai_ocr(image_bytes, file.content_type or "image/jpeg", openai_key)
+        except Exception as e:
+            errors.append(f"OpenAI failover error: {e}")
+
+    # Try 3: Failover to Hugging Face if available
+    if hf_token:
+        try:
+            return _run_hf_ocr(image_bytes, file.content_type or "image/jpeg", hf_token)
+        except Exception as e:
+            errors.append(f"Hugging Face failover error: {e}")
+
+    # Try 4: Failover to Gemini if not tried already
+    if gemini_key and not is_broken_gemini and "Gemini error:" not in "".join(errors):
+        try:
+            return _run_gemini_ocr(image_bytes, file.content_type or "image/jpeg", gemini_key)
+        except Exception as e:
+            errors.append(f"Gemini failover error: {e}")
+
+    # If all failed
+    raise HTTPException(
+        status_code=500,
+        detail=f"All parser models failed. Details: {'; '.join(errors)}"
+    )
+
+

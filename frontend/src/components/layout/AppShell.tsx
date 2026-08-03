@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, useRef, type ComponentType } from "react";
-import { Bell, ChevronLeft, LogOut, Menu, Search, Smartphone, User } from "lucide-react";
+import { Bell, ChevronLeft, Hospital, LogOut, Menu, Search, Smartphone, User } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { clearSession, getSession, type Role } from "@/lib/auth";
 import { cn } from "@/lib/utils";

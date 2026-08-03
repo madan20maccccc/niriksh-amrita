@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Pencil, Trash2, Eye, Hospital, Loader2, Save, X, Phone, Key } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Hospital, Loader2, Save, X, Key } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, SectionHeader } from "@/components/ui/section";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -133,21 +133,13 @@ function WardsPage() {
             <Mini label="Nurses Stationed" value={wn.length} />
           </div>
 
-          {/* Doctor phone display */}
-          {(selectedWard.doctor_phone || selectedWard.callmebot_key) && (
+          {/* Doctor email display */}
+          {selectedWard.doctor_email && (
             <div className="mt-5 border-t border-slate-100 pt-4 flex flex-wrap gap-6 text-xs text-slate-500 font-medium">
-              {selectedWard.doctor_phone && (
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Ward Doctor Phone: <strong className="text-slate-800 font-bold">+{selectedWard.doctor_phone}</strong></span>
-                </div>
-              )}
-              {selectedWard.callmebot_key && (
-                <div className="flex items-center gap-1.5">
-                  <Key className="h-3.5 w-3.5 text-slate-400" />
-                  <span>CallMeBot API Key: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">configured ✓</span></span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5">
+                <Key className="h-3.5 w-3.5 text-slate-400" />
+                <span>Doctor Alert Email: <strong className="text-slate-800 font-bold">{selectedWard.doctor_email}</strong></span>
+              </div>
             </div>
           )}
         </Card>
@@ -258,7 +250,7 @@ function WardsPage() {
                     </td>
                     <td className="px-5 py-4">{wn.length}</td>
                     <td className="px-5 py-4 text-xs font-medium text-slate-500 font-mono">
-                      {w.doctor_phone ? `+${w.doctor_phone}` : "—"}
+                      {w.doctor_email || "—"}
                     </td>
                     <td className="px-5 py-4">
                       <StatusPill tone={tone}>{status}</StatusPill>
@@ -313,11 +305,7 @@ function WardModal({ ward, onClose, onSave }: { ward?: any; onClose: () => void;
     floor: ward?.floor || "",
     capacity: ward?.capacity || 20,
     ward_type: ward?.ward_type || "General",
-    doctor_phone: ward?.doctor_phone || "",
-    callmebot_key: ward?.callmebot_key || "",
-    senior_doctor_phone: ward?.senior_doctor_phone || "",
-    nursing_supervisor_phone: ward?.nursing_supervisor_phone || "",
-    admin_phone: ward?.admin_phone || "",
+    doctor_email: ward?.doctor_email || "madan.m200607@gmail.com",
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -331,7 +319,6 @@ function WardModal({ ward, onClose, onSave }: { ward?: any; onClose: () => void;
       ...form,
       floor: parseInt(form.floor as string),
       capacity: parseInt(form.capacity as string),
-      doctor_phone: form.doctor_phone.replace(/\D/g, ""), // Keep numeric only
     };
 
     try {
@@ -410,61 +397,22 @@ function WardModal({ ward, onClose, onSave }: { ward?: any; onClose: () => void;
 
           <div className="sm:col-span-2 border-t border-border pt-3 mt-1">
             <div className="flex items-center gap-1.5 mb-3">
-              <Phone className="h-3.5 w-3.5 text-red-500" />
-              <span className="text-[11px] uppercase tracking-wider text-slate-700 font-bold">Escalation Chain — Auto SMS / Telegram</span>
+              <span className="text-[11px] uppercase tracking-wider text-slate-700 font-bold">📧 Doctor Alert Email</span>
             </div>
-            <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 mb-3">
-              🚨 Configure ALL 4 levels. System auto-escalates every 15 min if doctor doesn't respond!
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-700 mb-3">
+              ✅ Critical alerts will be automatically emailed here when NEWS2 hits ORANGE or RED.
             </div>
-            <div className="space-y-2.5">
-              {/* Level 1 */}
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
-                <div className="flex-1">
-                  <div className="text-[10px] font-bold text-red-700 uppercase tracking-wider">Level 1 — Duty Doctor (IMMEDIATE)</div>
-                  <input type="text" placeholder="919876543210" value={form.doctor_phone}
-                    onChange={e => setForm(f => ({ ...f, doctor_phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-red-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-red-300 text-xs font-mono" />
-                </div>
-              </div>
-              {/* Level 2 */}
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
-                <div className="flex-1">
-                  <div className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Level 2 — Senior Doctor / Consultant (+15 min)</div>
-                  <input type="text" placeholder="919876543211" value={form.senior_doctor_phone}
-                    onChange={e => setForm(f => ({ ...f, senior_doctor_phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-orange-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-orange-300 text-xs font-mono" />
-                </div>
-              </div>
-              {/* Level 3 */}
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-yellow-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
-                <div className="flex-1">
-                  <div className="text-[10px] font-bold text-yellow-700 uppercase tracking-wider">Level 3 — Nursing Supervisor / HOD (+30 min)</div>
-                  <input type="text" placeholder="919876543212" value={form.nursing_supervisor_phone}
-                    onChange={e => setForm(f => ({ ...f, nursing_supervisor_phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-yellow-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300 text-xs font-mono" />
-                </div>
-              </div>
-              {/* Level 4 */}
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-slate-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
-                <div className="flex-1">
-                  <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Level 4 — Admin Office / Medical Superintendent (+45 min)</div>
-                  <input type="text" placeholder="919876543213" value={form.admin_phone}
-                    onChange={e => setForm(f => ({ ...f, admin_phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300 text-xs font-mono" />
-                </div>
-              </div>
-              {/* CallMeBot WhatsApp key */}
-              <div className="pt-1 border-t border-border">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">CallMeBot WhatsApp API Key (Optional)</div>
-                <input type="text" placeholder="123456" value={form.callmebot_key}
-                  onChange={e => setForm(f => ({ ...f, callmebot_key: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-xs font-mono" />
-              </div>
-            </div>
+            <label className="block text-sm">
+              <span className="font-medium text-foreground text-xs">Doctor's Email Address</span>
+              <input
+                type="email"
+                placeholder="doctor@hospital.com"
+                value={form.doctor_email}
+                onChange={e => setForm(f => ({ ...f, doctor_email: e.target.value }))}
+                className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30 text-sm font-mono"
+              />
+              <span className="text-[11px] text-slate-400 mt-1 block">Alerts fire immediately and re-send every 15 min until acknowledged.</span>
+            </label>
           </div>
 
           <div className="sm:col-span-2 border-t border-border pt-4 mt-2 flex justify-end gap-2">

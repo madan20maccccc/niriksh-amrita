@@ -332,7 +332,7 @@ function VitalsPage() {
         setSpo2(result.spo2 ? String(result.spo2) : "");
         setRespiratoryRate(result.respiratory_rate ? String(result.respiratory_rate) : "");
         setTemperature(result.temperature ? String(result.temperature) : "");
-        setRemarks(`OCR: Parsed "${file.name}" via Gemini Flash Vision API.`);
+        setRemarks(`OCR: Parsed "${file.name}" via ${result.parsed_by || "Gemini Flash Vision API"}.`);
         setIsScanning(false); setScanDone(true);
         toast.success("AI Vision scan completed!");
       }, 300);

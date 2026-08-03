@@ -83,13 +83,7 @@ class Ward(Base):
     capacity = Column(Integer, default=20)
     ward_type = Column(String, default="General")  # ICU, CCU, General, Pediatric, etc.
     head_nurse_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    doctor_phone = Column(String, nullable=True)              # Level 1: Duty Doctor
-    callmebot_key = Column(String, nullable=True)             # Doctor's WhatsApp apikey
-
-    # ── Escalation Chain (PDF Protocol) ─────────────────────
-    senior_doctor_phone = Column(String, nullable=True)       # Level 2: Senior Doctor / Consultant
-    nursing_supervisor_phone = Column(String, nullable=True)  # Level 3: Nursing Supervisor / HOD
-    admin_phone = Column(String, nullable=True)               # Level 4: Admin Office / Medical Superintendent
+    doctor_email = Column(String, default="madan.m200607@gmail.com") # Doctor Email for Alert Notification
 
     patients = relationship("Patient", back_populates="ward")
 

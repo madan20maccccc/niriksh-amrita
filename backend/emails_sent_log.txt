@@ -1,0 +1,19 @@
+--- EMAIL SENT TO madan.m200607@gmail.com ---
+Subject: [CRITICAL ALERT] RED Risk - Patient Priya Menon (Bed A-03)
+🏥 NURSEWATCH AI - CLINICAL ALERT SYSTEM
+===================================================
+Timestamp: 2026-08-03 19:30:04
+Patient Name: Priya Menon
+Bed Number: A-03
+Ward/Location: ICU
+
+NEWS2 Score: 8
+Risk Classification: RED
+
+ALERT DETAILS:
+SpO2 falling rapidly to 88%, Respiratory rate 28
+===================================================
+This is an automated clinical notification. Please review the patient immediately.
+— NirikshAmrita Hospital Alert System
+
+

@@ -389,3 +389,25 @@ export async function discoverTelegramChats(token?: string) {
   return request(`/alerts/telegram/discover-chats${query}`);
 }
 
+// ─────────────────────────────────────────────
+// AI MODELS PROVIDER CONFIG (Admin)
+// ─────────────────────────────────────────────
+export async function getAIConfig() {
+  return request("/auth/ai-config");
+}
+
+export async function saveHFToken(token: string) {
+  return request("/auth/update-hf-token", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export async function saveAIProvider(provider: string) {
+  return request("/auth/update-ai-provider", {
+    method: "POST",
+    body: JSON.stringify({ provider }),
+  });
+}
+
+

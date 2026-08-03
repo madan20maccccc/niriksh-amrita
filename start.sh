@@ -3,9 +3,13 @@
 # Exit immediately if any command fails
 set -e
 
+# Run database seeding to populate initial users and wards
+echo "[START] Seeding database..."
+cd /app/backend
+./venv/bin/python seed.py || echo "Seeding bypassed or already done"
+
 # Start FastAPI backend in the background
 echo "[START] Starting FastAPI Backend on port 8000..."
-cd /app/backend
 ./venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 
 # Start Frontend Node.js production server in the foreground

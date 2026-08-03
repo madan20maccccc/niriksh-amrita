@@ -162,3 +162,167 @@ def update_gemini_key(
 
     return {"success": True, "message": "Gemini API key updated successfully."}
 
+
+class HFTokenRequest(BaseModel):
+    token: str
+
+@router.post("/update-hf-token")
+def update_hf_token(
+    req: HFTokenRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Admin only: updates the HUGGINGFACE_API_KEY inside .env and environment."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Only admins can configure system API keys")
+
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    lines = [l for l in lines if not l.startswith("HUGGINGFACE_API_KEY=")]
+    lines.append(f"HUGGINGFACE_API_KEY={req.token}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    os.environ["HUGGINGFACE_API_KEY"] = req.token
+    return {"success": True, "message": "Hugging Face API token updated successfully."}
+
+
+class AIProviderRequest(BaseModel):
+    provider: str  # "gemini" or "huggingface"
+
+@router.post("/update-ai-provider")
+def update_ai_provider(
+    req: AIProviderRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Admin only: updates the active AI_PROVIDER inside .env and environment."""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Only admins can configure system API keys")
+
+    if req.provider not in ["gemini", "huggingface"]:
+        raise HTTPException(status_code=400, detail="Invalid provider. Choose 'gemini' or 'huggingface'")
+
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    lines = [l for l in lines if not l.startswith("AI_PROVIDER=")]
+    lines.append(f"AI_PROVIDER={req.provider}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    os.environ["AI_PROVIDER"] = req.provider
+    return {"success": True, "message": f"Active AI Provider switched to {req.provider}."}
+
+
+@router.get("/ai-config")
+def get_ai_config(
+    current_user: models.User = Depends(get_current_user),
+):
+    """Returns current active AI configurations."""
+    import os
+    # Read directly from .env to avoid process sync issues
+    gemini_key = ""
+    hf_token = ""
+    provider = "gemini"
+    
+    try:
+        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                for line in f:
+                    if line.startswith("GEMINI_API_KEY="):
+                        gemini_key = line.split("=", 1)[1].strip()
+                    elif line.startswith("HUGGINGFACE_API_KEY="):
+                        hf_token = line.split("=", 1)[1].strip()
+                    elif line.startswith("AI_PROVIDER="):
+                        provider = line.split("=", 1)[1].strip()
+    except Exception:
+        pass
+        
+    return {
+        "gemini_api_key": gemini_key,
+        "huggingface_api_key": hf_token,
+        "ai_provider": provider
+    }
+
+
+class EmailConfigRequest(BaseModel):
+    doctor_email: str
+    smtp_user: str = ""
+    smtp_pass: str = ""
+
+
+@router.post("/update-email-config")
+def update_email_config(
+    req: EmailConfigRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Admin only: saves doctor email and SMTP config to .env"""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Only admins can configure system settings")
+
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+
+    lines = [l for l in lines if not l.startswith("DOCTOR_EMAIL=") and not l.startswith("SMTP_USER=") and not l.startswith("SMTP_PASS=")]
+    lines.append(f"DOCTOR_EMAIL={req.doctor_email}\n")
+    if req.smtp_user:
+        lines.append(f"SMTP_USER={req.smtp_user}\n")
+    if req.smtp_pass:
+        lines.append(f"SMTP_PASS={req.smtp_pass}\n")
+
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    os.environ["DOCTOR_EMAIL"] = req.doctor_email
+    if req.smtp_user:
+        os.environ["SMTP_USER"] = req.smtp_user
+    if req.smtp_pass:
+        os.environ["SMTP_PASS"] = req.smtp_pass
+
+    return {"success": True, "message": f"Email config saved. Alerts will go to {req.doctor_email}"}
+
+
+class TestEmailRequest(BaseModel):
+    to_email: str
+
+
+@router.post("/test-email")
+def test_email_alert(
+    req: TestEmailRequest,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Admin only: sends a test email alert"""
+    if current_user.role != models.UserRole.admin:
+        raise HTTPException(status_code=403, detail="Only admins can send test alerts")
+
+    from agents.email_notifier import send_email_alert
+    result = send_email_alert(
+        patient_name="Test Patient",
+        bed_number="DEMO-01",
+        news2_score=7,
+        risk_level="RED",
+        details="This is a test alert from NurseWatch AI. Your email notifications are working correctly!",
+        ward_name="Test Ward",
+        to_email=req.to_email
+    )
+    return result
