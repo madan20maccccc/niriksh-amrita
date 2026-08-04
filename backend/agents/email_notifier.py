@@ -6,7 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 DEFAULT_DOCTOR_EMAIL = "madan.m200607@gmail.com"
-RESEND_ACCOUNT_EMAIL = "madanthegreat39@gmail.com"
+RESEND_ACCOUNT_EMAIL = "madan.m200607@gmail.com"
 
 def send_email_alert(
     patient_name: str,
