@@ -123,6 +123,7 @@ class PatientSummary(BaseModel):
     primary_diagnosis: str
     is_active: bool = True
     assigned_nurse_id: Optional[int] = None
+    assigned_nurse_name: Optional[str] = None
     latest_risk_level: Optional[str] = None
     latest_news2: Optional[int] = None
     active_alerts: int = 0

@@ -166,7 +166,9 @@ function PatientsPage() {
                 {filtered.map(p => {
                   const risk = p.latest_risk_level || "GREEN";
                   const wardName = wards.find(w => w.id === p.ward_id)?.name || "—";
-                  const nurseName = nurses.find(n => n.id === p.assigned_nurse_id || n.assigned_ward_id === p.ward_id)?.full_name || "Nurse Staff 1 (nurse1)";
+                  const nurseName = p.assigned_nurse_name || 
+                    nurses.find((n: any) => n.id === p.assigned_nurse_id)?.full_name || 
+                    "Unassigned";
                   return (
                     <tr key={p.id} className="hover:bg-primary-soft/20 transition">
                       <td className="px-5 py-3">
@@ -184,7 +186,18 @@ function PatientsPage() {
                       <td className="px-5 py-3">{p.age} · {p.gender}</td>
                       <td className="px-5 py-3 max-w-[14rem] truncate text-muted-foreground">{p.primary_diagnosis}</td>
                       <td className="px-5 py-3 font-mono text-xs">{p.bed_number}</td>
-                      <td className="px-5 py-3 font-semibold text-xs text-slate-700">{nurseName}</td>
+                      <td className="px-5 py-3">
+                        {nurseName === "Unassigned" ? (
+                          <span className="text-xs text-slate-400 italic">Unassigned</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="h-6 w-6 grid place-items-center rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold shrink-0">
+                              {nurseName[0]}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-700">{nurseName}</span>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-5 py-3">
                         <StatusPill tone={riskTone(risk) as any}>{risk}</StatusPill>
                       </td>
@@ -433,8 +446,8 @@ function PatientFormModal({
               className="mt-1.5 w-full rounded-xl border border-input bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Select Nurse...</option>
-              {nurses.filter(n => n.role === "nurse").map(n => (
-                <option key={n.id} value={n.id}>{n.full_name} ({n.employee_id})</option>
+              {nurses.map((n: any) => (
+                <option key={n.id} value={n.id}>{n.full_name} ({n.employee_id} · {n.department || "General"})</option>
               ))}
             </select>
           </label>

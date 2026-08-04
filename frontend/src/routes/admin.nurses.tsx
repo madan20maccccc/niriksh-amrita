@@ -15,6 +15,7 @@ function NursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [wardFilter, setWardFilter] = useState<string>("All");
+  const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [selectedNurse, setSelectedNurse] = useState<any>(null);
 
@@ -35,8 +36,8 @@ function NursesPage() {
 
   const filtered = nurses.filter(n =>
     (wardFilter === "All" || n.department === wardFilter) &&
-    (n.full_name.toLowerCase().includes(q.toLowerCase()) ||
-      n.employee_id.toLowerCase().includes(q.toLowerCase()) ||
+    ((n.full_name || "").toLowerCase().includes(q.toLowerCase()) ||
+      (n.employee_id || "").toLowerCase().includes(q.toLowerCase()) ||
       (n.email || "").toLowerCase().includes(q.toLowerCase()))
   );
 
@@ -141,12 +142,12 @@ function NursesPage() {
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft font-semibold text-primary text-sm">
-                        {n.full_name[0]}
+                        {(n.full_name || "N")[0]}
                       </div>
-                      <div className="font-medium text-foreground">{n.full_name}</div>
+                      <div className="font-medium text-foreground">{n.full_name || "Staff Member"}</div>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground font-mono text-xs">{n.employee_id}</td>
+                  <td className="px-5 py-3 text-muted-foreground font-mono text-xs">{n.employee_id || "—"}</td>
                   <td className="px-5 py-3 text-muted-foreground">
                     <div>{n.email}</div>
                     {n.phone && <div className="text-xs">{n.phone}</div>}
@@ -164,9 +165,9 @@ function NursesPage() {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <IconBtn onClick={() => handleResetPassword(n.id, n.full_name)} title="Reset password"><KeyRound className="h-4 w-4" /></IconBtn>
+                      <IconBtn onClick={() => handleResetPassword(n.id, n.full_name || "Nurse")} title="Reset password"><KeyRound className="h-4 w-4" /></IconBtn>
                       <IconBtn onClick={() => { setSelectedNurse(n); setShowEdit(true); }} title="Edit"><Pencil className="h-4 w-4" /></IconBtn>
-                      <IconBtn onClick={() => handleDeactivate(n.id, n.full_name)} title="Deactivate"><Trash2 className="h-4 w-4 text-[var(--color-critical)]" /></IconBtn>
+                      <IconBtn onClick={() => handleDeactivate(n.id, n.full_name || "Nurse")} title="Deactivate"><Trash2 className="h-4 w-4 text-[var(--color-critical)]" /></IconBtn>
                     </div>
                   </td>
                 </tr>

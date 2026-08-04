@@ -69,6 +69,15 @@ def list_alerts(
 ):
     query = db.query(models.Alert)
 
+    # Role-based filtering for nurses
+    if current_user.role == models.UserRole.nurse:
+        ward = db.query(models.Ward).filter(models.Ward.name == current_user.department).first()
+        if ward:
+            patient_ids = [p.id for p in db.query(models.Patient).filter((models.Patient.assigned_nurse_id == current_user.id) | (models.Patient.ward_id == ward.id)).all()]
+        else:
+            patient_ids = [p.id for p in db.query(models.Patient).filter(models.Patient.assigned_nurse_id == current_user.id).all()]
+        query = query.filter(models.Alert.patient_id.in_(patient_ids))
+
     if status:
         query = query.filter(models.Alert.status == status)
     if risk_level:
@@ -77,10 +86,10 @@ def list_alerts(
         query = query.filter(models.Alert.patient_id == patient_id)
     if ward_id:
         # Filter alerts where patient is in that ward
-        patient_ids = [
+        p_ids = [
             p.id for p in db.query(models.Patient).filter(models.Patient.ward_id == ward_id).all()
         ]
-        query = query.filter(models.Alert.patient_id.in_(patient_ids))
+        query = query.filter(models.Alert.patient_id.in_(p_ids))
 
     alerts = query.order_by(models.Alert.created_at.desc()).limit(limit).all()
     return [schemas.AlertOut.model_validate(a) for a in alerts]

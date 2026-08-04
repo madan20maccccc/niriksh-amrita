@@ -53,9 +53,17 @@ def list_patients(
     """Returns patient list with latest risk level and alert count"""
     query = db.query(models.Patient).filter(models.Patient.is_active == True)
 
-    # Nurses only see their assigned patients
+    # Nurses see their assigned patients or patients in their ward
     if current_user.role == models.UserRole.nurse:
-        query = query.filter(models.Patient.assigned_nurse_id == current_user.id)
+        if ward_id:
+            query = query.filter(models.Patient.ward_id == ward_id)
+        elif current_user.department:
+            ward = db.query(models.Ward).filter(models.Ward.name == current_user.department).first()
+            if ward:
+                query = query.filter((models.Patient.assigned_nurse_id == current_user.id) | (models.Patient.ward_id == ward.id))
+            else:
+                # If no specific ward match, show assigned or all active ward patients
+                query = query.filter((models.Patient.assigned_nurse_id == current_user.id) | (models.Patient.assigned_nurse_id == None))
     elif ward_id:
         query = query.filter(models.Patient.ward_id == ward_id)
 
@@ -86,6 +94,8 @@ def list_patients(
             bed_number=p.bed_number,
             ward_id=p.ward_id,
             primary_diagnosis=p.primary_diagnosis,
+            assigned_nurse_id=p.assigned_nurse_id,
+            assigned_nurse_name=p.assigned_nurse.full_name if p.assigned_nurse else None,
             latest_risk_level=latest_vital.risk_level.value if latest_vital and latest_vital.risk_level else None,
             latest_news2=latest_vital.news2_score if latest_vital else None,
             active_alerts=active_alerts or 0,

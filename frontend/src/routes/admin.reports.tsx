@@ -4,6 +4,7 @@ import { Download, FileSpreadsheet, FileText, Loader2, RefreshCw, TrendingUp, Ac
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { Card, SectionHeader } from "@/components/ui/section";
 import { getAnalyticsSummary } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/reports")({ component: ReportsPage });
 
@@ -293,8 +294,20 @@ function ReportsPage() {
                   </div>
                 </div>
               </div>
-              <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm hover:bg-muted">
-                <Download className="h-4 w-4" /> Download
+              <button 
+                onClick={() => {
+                  const content = `===================================================\nNURSEWATCH AI — CLINICAL REPORT ARCHIVE\nTitle: ${t}\nGenerated: ${new Date().toLocaleString()}\nInstitution: Amrita School of Artificial Intelligence\n===================================================\n\nSummary:\n- Total Ward Patients Evaluated: ${analytics.total_patients || 0}\n- Active Clinical Alerts: ${analytics.total_active_alerts || 0}\n- Overall Risk Status: NOMINAL / OPERATIONAL\n\nGenerated automatically by NirikshAmrita Agent System.\n`;
+                  const blob = new Blob([content], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${t.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().slice(0,10)}.txt`;
+                  a.click();
+                  toast.success(`Downloaded ${t}`);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm hover:bg-muted font-semibold text-slate-700 shadow-sm"
+              >
+                <Download className="h-4 w-4 text-primary" /> Download Report
               </button>
             </li>
           ))}
