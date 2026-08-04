@@ -203,16 +203,14 @@ export async function getPatientSbars(patientId: number, limit = 10) {
   return request(`/sbar/patient/${patientId}?limit=${limit}`);
 }
 
-export async function generateSbarNow(patientId: number, lang?: string) {
-  const query = lang ? `?lang=${lang}` : "";
-  return request(`/sbar/generate/${patientId}${query}`, {
+export async function generateSbarNow(patientId: number) {
+  return request(`/sbar/generate/${patientId}`, {
     method: "POST",
   });
 }
 
-export async function getSbar(sbarId: number, lang?: string) {
-  const query = lang ? `?lang=${lang}` : "";
-  return request(`/sbar/${sbarId}${query}`);
+export async function getSbar(sbarId: number) {
+  return request(`/sbar/${sbarId}`);
 }
 
 // ─────────────────────────────────────────────

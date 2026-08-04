@@ -11,6 +11,7 @@ function NotifPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | "critical" | "warnings" | "acked">("all");
 
   const loadAlerts = async () => {
     try {
@@ -45,7 +46,7 @@ function NotifPage() {
     );
   }
 
-  const [tab, setTab] = useState<"all" | "critical" | "warnings" | "acked">("all");
+
 
   const redAlerts = alerts.filter(a => a.risk_level === "RED" && a.status === "active");
   const orangeAlerts = alerts.filter(a => a.risk_level === "ORANGE" && a.status === "active");

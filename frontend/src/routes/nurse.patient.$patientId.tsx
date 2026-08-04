@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { 
   Sparkles, Loader2, Send, AlertTriangle, HelpCircle, Bell,
   TrendingUp, Eye, CheckCircle2, Info,
-  CheckCheck, Globe, HelpCircle as HelpIcon, FileText
+  CheckCheck, FileText
 } from "lucide-react";
 import { 
   CartesianGrid, Line, LineChart, ResponsiveContainer, 
@@ -52,8 +52,7 @@ function PatientDetail() {
   // Email Alert State
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
 
-  // SBAR language translation states
-  const [sbarLang, setSbarLang] = useState("english");
+  // SBAR state
   const [generatingSbar, setGeneratingSbar] = useState(false);
   const [sbarWarning, setSbarWarning] = useState<string | null>(null);
 
@@ -152,30 +151,11 @@ function PatientDetail() {
     }
   };
 
-  const handleLanguageChange = async (lang: string) => {
-    setSbarLang(lang);
-    setGeneratingSbar(true);
-    setSbarWarning(null);
-    try {
-      const report = await generateSbarNow(pId, lang);
-      setSbar(report);
-      if ((report as any).translation_error) {
-        setSbarWarning("⚠️ " + (report as any).translation_error);
-      } else {
-        setSbarWarning(null);
-      }
-    } catch (err: any) {
-      setSbarWarning("⚠️ Translation service busy. Showing English template SBAR.");
-    } finally {
-      setGeneratingSbar(false);
-    }
-  };
-
   const handleRegenerateSbar = async () => {
     setGeneratingSbar(true);
     setSbarWarning(null);
     try {
-      const report = await generateSbarNow(pId, sbarLang === "english" ? undefined : sbarLang);
+      const report = await generateSbarNow(pId);
       setSbar(report);
       if (report.generated_by === "template") {
         setSbarWarning("ℹ️ Local rule template used (Gemini API offline).");
