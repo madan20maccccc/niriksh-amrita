@@ -45,36 +45,72 @@ function NotifPage() {
     );
   }
 
+  const [tab, setTab] = useState<"all" | "critical" | "warnings" | "acked">("all");
+
   const redAlerts = alerts.filter(a => a.risk_level === "RED" && a.status === "active");
   const orangeAlerts = alerts.filter(a => a.risk_level === "ORANGE" && a.status === "active");
   const yellowAlerts = alerts.filter(a => a.risk_level === "YELLOW" && a.status === "active");
   const acknowledgedAlerts = alerts.filter(a => a.status === "acknowledged");
 
+  const filteredNotifications = alerts.filter(a => {
+    if (tab === "critical") return (a.risk_level === "RED" || a.risk_level === "ORANGE") && a.status === "active";
+    if (tab === "warnings") return a.risk_level === "YELLOW" && a.status === "active";
+    if (tab === "acked") return a.status === "acknowledged";
+    return true;
+  });
+
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Clinical Notifications" hint="Safety warnings, re-escalations and audit alerts" />
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Tile icon={AlertTriangle} label="Critical RED Alerts" v={redAlerts.length} tone="critical" />
-        <Tile icon={Clock} label="High ORANGE Alerts" v={orangeAlerts.length} tone="warning" />
-        <Tile icon={BellRing} label="Watch YELLOW Alerts" v={yellowAlerts.length} tone="info" />
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <SectionHeader title="Clinical Notifications Center" hint="Organized safety alerts, escalation logs, and shift warnings" />
+      
+      {/* Counters */}
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Tile icon={AlertTriangle} label="Critical RED" v={redAlerts.length} tone="critical" />
+        <Tile icon={Clock} label="High ORANGE" v={orangeAlerts.length} tone="warning" />
+        <Tile icon={BellRing} label="Watch YELLOW" v={yellowAlerts.length} tone="info" />
         <Tile icon={TrendingUp} label="Acknowledged" v={acknowledgedAlerts.length} tone="primary" />
       </div>
+
+      {/* Category Tabs */}
+      <Card className="p-3 flex items-center gap-2">
+        {[
+          { id: "all", label: `All Notifications (${alerts.length})` },
+          { id: "critical", label: `🚨 Critical Alerts (${redAlerts.length + orangeAlerts.length})` },
+          { id: "warnings", label: `⚡ Shift Warnings (${yellowAlerts.length})` },
+          { id: "acked", label: `✅ Acknowledged (${acknowledgedAlerts.length})` }
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id as any)}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              tab === t.id ? "bg-primary text-primary-foreground shadow-sm" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </Card>
+
+      {/* Filtered Notification Cards */}
       <Card className="p-4">
-        {alerts.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            No clinical notifications issued on this shift.
+        {filteredNotifications.length === 0 ? (
+          <div className="py-10 text-center text-xs text-slate-400">
+            No notifications found in this category.
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {alerts.slice(0, 15).map(a => {
+            {filteredNotifications.map(a => {
               const severity = a.risk_level || "YELLOW";
               const tone = severity === "RED" ? "critical" : severity === "ORANGE" ? "warning" : "info";
               return (
-                <li key={a.id} className="flex items-center justify-between py-3.5 hover:bg-slate-50/50 px-2 rounded-lg transition">
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{a.message}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      Type: <span className="capitalize font-medium">{a.alert_type}</span> · Issued: {new Date(a.created_at).toLocaleString()}
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5 px-3 hover:bg-slate-50 rounded-xl transition">
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-1 h-3 w-3 rounded-full shrink-0 ${severity === "RED" ? "bg-red-500 animate-pulse" : severity === "ORANGE" ? "bg-orange-500" : "bg-yellow-500"}`} />
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800">{a.message}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Patient: <span className="font-bold text-slate-700">{a.patient_name || "Bedside Monitor"}</span> · Triggered: {new Date(a.created_at).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

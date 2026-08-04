@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Plus, Search, Pencil, Trash2, KeyRound, Filter, Loader2, RefreshCw } from "lucide-react";
 import { Card, SectionHeader } from "@/components/ui/section";
 import { StatusPill } from "@/components/ui/status-pill";
-import { getNurses, getWards, request, deactivateUser, resetUserPassword } from "@/lib/api";
+import { getNurses, getWards, request, deactivateUser, resetUserPassword, updateUser } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/nurses")({ component: NursesPage });
@@ -15,7 +15,8 @@ function NursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [wardFilter, setWardFilter] = useState<string>("All");
-  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [selectedNurse, setSelectedNurse] = useState<any>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -164,7 +165,7 @@ function NursesPage() {
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <IconBtn onClick={() => handleResetPassword(n.id, n.full_name)} title="Reset password"><KeyRound className="h-4 w-4" /></IconBtn>
-                      <IconBtn title="Edit"><Pencil className="h-4 w-4" /></IconBtn>
+                      <IconBtn onClick={() => { setSelectedNurse(n); setShowEdit(true); }} title="Edit"><Pencil className="h-4 w-4" /></IconBtn>
                       <IconBtn onClick={() => handleDeactivate(n.id, n.full_name)} title="Deactivate"><Trash2 className="h-4 w-4 text-[var(--color-critical)]" /></IconBtn>
                     </div>
                   </td>
@@ -176,6 +177,7 @@ function NursesPage() {
       </Card>
 
       {showAdd && <AddNurseModal wards={wards} onClose={() => setShowAdd(false)} onSave={loadData} />}
+      {showEdit && selectedNurse && <EditNurseModal nurse={selectedNurse} wards={wards} onClose={() => { setShowEdit(false); setSelectedNurse(null); }} onSave={loadData} />}
     </div>
   );
 
@@ -278,6 +280,72 @@ function AddNurseModal({ wards, onClose, onSave }: { wards: any[]; onClose: () =
               className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant disabled:opacity-60"
             >
               {saving ? "Creating..." : "Create Nurse"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditNurseModal({ nurse, wards, onClose, onSave }: { nurse: any; wards: any[]; onClose: () => void; onSave: () => void }) {
+  const [form, setForm] = useState({
+    full_name: nurse.full_name || "",
+    email: nurse.email || "",
+    phone: nurse.phone || "",
+    role: nurse.role || "nurse",
+    department: nurse.department || ""
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setErr(null);
+    try {
+      await updateUser(nurse.id, form);
+      toast.success(`Profile for ${form.full_name} updated successfully!`);
+      onSave();
+      onClose();
+    } catch (error: any) {
+      setErr(error.message || "Failed to update nurse.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-elegant">
+        <h3 className="font-display text-xl text-foreground font-bold">Edit Nursing Staff</h3>
+        <p className="text-sm text-muted-foreground mt-1">Update details for {nurse.full_name} ({nurse.employee_id}).</p>
+        {err && <div className="mt-3 rounded-xl bg-destructive/10 text-destructive text-xs p-3 border border-destructive/20">{err}</div>}
+        <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+          <Field label="Full Name" value={form.full_name} onChange={v => setForm(f => ({ ...f, full_name: v }))} required />
+          <Field label="Email" type="email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} required />
+          <Field label="Phone" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+          <SelectField
+            label="Role"
+            options={["nurse", "supervisor", "doctor"]}
+            value={form.role}
+            onChange={v => setForm(f => ({ ...f, role: v }))}
+          />
+          <SelectField
+            label="Assigned Ward / Department"
+            options={wards.map(w => w.name)}
+            value={form.department}
+            onChange={v => setForm(f => ({ ...f, department: v }))}
+            className="sm:col-span-2"
+          />
+          <div className="sm:col-span-2 mt-2 flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm">Cancel</button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant disabled:opacity-60"
+            >
+              {saving ? "Saving Changes..." : "Save Changes"}
             </button>
           </div>
         </form>

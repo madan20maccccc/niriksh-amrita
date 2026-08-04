@@ -72,11 +72,22 @@ function ReportsPage() {
           <button onClick={loadData} className="grid h-9 w-9 place-items-center rounded-xl border border-border bg-white hover:bg-muted shadow-sm">
             <RefreshCw className="h-4 w-4 text-muted-foreground" />
           </button>
-          <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm hover:bg-muted">
-            <FileText className="h-4 w-4" /> Export PDF
+          <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm hover:bg-muted font-semibold text-slate-700 shadow-sm">
+            <FileText className="h-4 w-4 text-red-600" /> Export PDF (Print)
           </button>
-          <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm hover:bg-muted">
-            <FileSpreadsheet className="h-4 w-4" /> Export Excel
+          <button 
+            onClick={() => {
+              const headers = "Ward Name,Total Patients,GREEN,YELLOW,ORANGE,RED,Active Alerts,Avg NEWS2\n";
+              const rows = analytics.ward_stats.map((w: any) => `${w.ward_name},${w.total_patients},${w.green_count},${w.yellow_count},${w.orange_count},${w.red_count},${w.active_alerts},${w.avg_news2 || 0}`).join("\n");
+              const blob = new Blob([headers + rows], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `NirikshAmrita_Clinical_Report_${new Date().toISOString().slice(0,10)}.csv`;
+              a.click();
+            }} 
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm hover:bg-muted font-semibold text-slate-700 shadow-sm"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Export CSV / Excel
           </button>
         </div>
       </div>

@@ -80,6 +80,33 @@ export async function getPatientSummary(id: number) {
   return request(`/patients/${id}/summary`);
 }
 
+export async function createPatient(patientData: any) {
+  return request("/patients/", {
+    method: "POST",
+    body: JSON.stringify(patientData),
+  });
+}
+
+export async function updatePatient(id: number, patientData: any) {
+  return request(`/patients/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(patientData),
+  });
+}
+
+export async function deletePatient(id: number) {
+  return request(`/patients/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateUser(userId: number, userData: any) {
+  return request(`/auth/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(userData),
+  });
+}
+
 // ─────────────────────────────────────────────
 // VITALS
 // ─────────────────────────────────────────────
