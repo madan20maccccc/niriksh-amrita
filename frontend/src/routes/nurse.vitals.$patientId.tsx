@@ -253,8 +253,6 @@ function VitalsPage() {
   const [dragOver, setDragOver] = useState(false);
   const [activeInterval, setActiveInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
-  // WhatsApp overlay
-  const [whatsAppOverlay, setWhatsAppOverlay] = useState<any>(null);
 
   // Form
   const [shift] = useState<"Morning" | "Evening" | "Night">(getAutoShift);
@@ -413,7 +411,7 @@ function VitalsPage() {
         } catch {}
 
         toast.error(`⚠️ CRITICAL ESCALATION DISPATCHED`, {
-          description: `Vitals logged. Real WhatsApp alert sent to Ward Doctor! NEWS2: ${news2}`,
+          description: `Vitals logged. Email alert sent to Ward Doctor! NEWS2: ${news2}`,
           duration: 6000
         });
       } else {

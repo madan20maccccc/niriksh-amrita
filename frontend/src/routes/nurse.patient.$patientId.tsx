@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { 
-  Sparkles, Loader2, Send, AlertTriangle, HelpCircle, 
+  Sparkles, Loader2, Send, AlertTriangle, HelpCircle, Bell,
   TrendingUp, Eye, CheckCircle2, Info,
-  Smartphone, MessageSquare, CheckCheck, Globe, HelpCircle as HelpIcon, FileText
+  CheckCheck, Globe, HelpCircle as HelpIcon, FileText
 } from "lucide-react";
 import { 
   CartesianGrid, Line, LineChart, ResponsiveContainer, 
@@ -49,8 +49,8 @@ function PatientDetail() {
   const [ackAction, setAckAction] = useState("");
   const [ackingAlertId, setAckingAlertId] = useState<number | null>(null);
 
-  // WhatsApp Alert Mockup Panel States
-  const [showDoctorPhone, setShowDoctorPhone] = useState(false);
+  // Email Alert State
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false);
 
   // SBAR language translation states
   const [sbarLang, setSbarLang] = useState("english");
@@ -239,7 +239,7 @@ function PatientDetail() {
     : [];
 
   const doctorName = "Dr. Ramesh Iyer";
-  const doctorPhone = "+91 98765 43210";
+  const doctorEmail = "madan.m200607@gmail.com";
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -282,84 +282,51 @@ function PatientDetail() {
         </div>
       </Card>
 
-      {/* WhatsApp Outbound Alert Gate */}
+      {/* Email Alert Sent Panel */}
       {(risk === "RED" || risk === "ORANGE") && (
-        <Card className="border-pink-200 bg-pink-50/20 p-5 ring-1 ring-pink-100/50 flex flex-col md:flex-row gap-5 items-center justify-between shadow-elegant">
+        <Card className="border-red-200 bg-red-50/30 p-5 ring-1 ring-red-100/60 flex flex-col md:flex-row gap-5 items-center justify-between shadow-elegant">
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
-              <MessageSquare className="h-5.5 w-5.5" />
+            <div className="h-10 w-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
+              <Bell className="h-5 w-5" />
             </div>
             <div className="space-y-1">
               <h3 className="font-display text-base font-bold text-slate-800 flex items-center gap-1.5">
-                Outbound WhatsApp Escalar Gateway
-                <span className="bg-emerald-100 text-emerald-800 text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">WhatsApp Delivered</span>
+                Doctor Email Alert Dispatched
+                <span className="bg-red-100 text-red-800 text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Alert Sent</span>
               </h3>
               <p className="text-xs text-slate-600 max-w-xl leading-relaxed font-medium">
-                Hospital warning logic auto-notified the critical care provider <strong>{doctorName} ({doctorPhone})</strong> regarding NEWS2 score deterioration.
+                Automated clinical escalation email sent to <strong>{doctorName}</strong> at <strong>{doctorEmail}</strong> for NEWS2 score deterioration.
               </p>
               <div className="flex items-center gap-4 text-[10px] font-mono text-slate-500 pt-1">
-                <span>Mode: <strong>Niriksh WhatsApp Agent</strong></span>
-                <span className="flex items-center gap-0.5 text-emerald-600">Status: <strong>Delivered</strong> <CheckCheck className="h-3 w-3 text-emerald-500" /></span>
-                <span>Stamp: {new Date(latestVital.recorded_at || Date.now()).toLocaleTimeString()}</span>
+                <span>Provider: <strong>NirikshAmrita Alert Engine</strong></span>
+                <span className="flex items-center gap-0.5 text-red-600">Status: <strong>Sent</strong> <CheckCheck className="h-3 w-3 text-red-500" /></span>
+                <span>Time: {new Date(latestVital.recorded_at || Date.now()).toLocaleTimeString()}</span>
               </div>
             </div>
           </div>
           <button
-            onClick={() => setShowDoctorPhone(!showDoctorPhone)}
-            className="shrink-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 transition flex items-center gap-1.5 shadow-elegant"
+            onClick={() => setShowEmailConfirm(!showEmailConfirm)}
+            className="shrink-0 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 transition flex items-center gap-1.5 shadow-elegant"
           >
-            <Smartphone className="h-4 w-4" /> 
-            {showDoctorPhone ? "Close Phone Screen" : "Review Doctor's WhatsApp Phone"}
+            <Bell className="h-4 w-4" />
+            {showEmailConfirm ? "Hide Preview" : "Preview Alert Email"}
           </button>
         </Card>
       )}
 
-      {/* Mock Doctor Phone Screen Drawer */}
-      {showDoctorPhone && (risk === "RED" || risk === "ORANGE") && (
-        <div className="flex justify-center py-3 animate-[slideDown_0.25s_ease-out]">
-          <div className="w-[330px] rounded-[36px] border-8 border-slate-800 bg-slate-900 shadow-[0_20px_40px_rgba(0,0,0,0.3)] overflow-hidden">
-            <div className="h-5 bg-slate-800 w-full flex justify-center items-center">
-              <div className="h-3 w-20 bg-slate-900 rounded-b-lg" />
-            </div>
-
-            <div className="bg-[#075e54] p-3 text-white flex items-center gap-2">
-              <div className="h-7 w-7 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center font-bold text-[10px]">
-                AMR
-              </div>
-              <div>
-                <div className="text-[11px] font-bold">NirikshAmrita Alerting Unit</div>
-                <div className="text-[8px] bg-white text-[#075e54] rounded px-1 font-bold inline-block leading-none py-0.5">Verified Business</div>
-              </div>
-            </div>
-
-            <div className="bg-[#ece5dd] p-3 min-h-[200px] flex flex-col justify-end gap-2">
-              <div className="text-[9px] text-center text-slate-500 bg-white/70 rounded-md py-1 max-w-[190px] mx-auto">
-                Official patient warning channel.
-              </div>
-
-              <div className="bg-[#dcf8c6] rounded-xl p-2.5 text-[11px] text-slate-800 shadow-sm max-w-[90%] self-end">
-                <div className="font-bold text-[#075e54] text-[9px] mb-1">⚠️ CLINICAL BREACH FLAG</div>
-                <p className="leading-snug font-medium">
-                  Patient <strong>{patient.full_name}</strong> (Bed {patient.bed_number}) is deteriorating.
-                  <br />
-                  - NEWS2 Score: <strong>{news2}</strong>
-                  <br />
-                  - SpO2: {latestVital.spo2}% | HR: {latestVital.heart_rate} bpm
-                  <br />
-                  - BP: {Math.round(latestVital.systolic_bp)}/{Math.round(latestVital.diastolic_bp)}
-                  <br />
-                  Please complete bedside review round.
-                </p>
-                <div className="text-[8px] text-slate-500 text-right mt-1.5 flex justify-end items-center gap-0.5">
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  <CheckCheck className="h-3 w-3 text-emerald-500" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="h-3 bg-slate-800 w-full flex justify-center items-center">
-              <div className="h-1 w-20 bg-slate-600 rounded-full" />
-            </div>
+      {/* Email Preview */}
+      {showEmailConfirm && (risk === "RED" || risk === "ORANGE") && (
+        <div className="rounded-2xl border border-red-200 bg-white p-5 shadow-card animate-[slideDown_0.25s_ease-out] text-xs space-y-2">
+          <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5"><Bell className="h-4 w-4 text-red-600" /> Email Alert Preview</div>
+          <div className="text-slate-500"><span className="font-semibold">To:</span> {doctorEmail}</div>
+          <div className="text-slate-500"><span className="font-semibold">Subject:</span> [CRITICAL ALERT] {risk} Risk — {patient.full_name} (Bed {patient.bed_number})</div>
+          <div className="rounded-xl bg-red-50 border border-red-100 p-4 text-slate-700 font-mono leading-relaxed">
+            <div className="font-bold text-red-700 mb-2">🏥 NURSEWATCH AI — CLINICAL ALERT</div>
+            Patient: <strong>{patient.full_name}</strong> | Bed: {patient.bed_number}<br />
+            NEWS2 Score: <strong>{news2}</strong> | Risk: <strong className="text-red-600">{risk}</strong><br />
+            SpO₂: {latestVital.spo2}% | HR: {latestVital.heart_rate} bpm<br />
+            BP: {Math.round(latestVital.systolic_bp)}/{Math.round(latestVital.diastolic_bp)} mmHg<br /><br />
+            Please review patient immediately.
           </div>
         </div>
       )}
