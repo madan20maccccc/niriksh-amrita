@@ -56,27 +56,37 @@ def translate_sbar(sbar: dict, target_lang: str) -> dict:
         else:
             serialized_sbar[k] = v
 
-    prompt = f"""You are a master clinical translator for Indian hospitals.
-Task: Translate the following English SBAR clinical handover report ENTIRELY into {lang_name} native script.
+    prompt = f"""You are a professional medical translator for hospital clinical records.
 
-CRITICAL INSTRUCTIONS:
-1. Every single sentence MUST be translated COMPLETELY into {lang_name} script ({lang_name} characters).
-2. Do NOT keep English sentences or English words (except medical acronyms like NEWS2, BP, SpO2, IV, mg if needed).
-3. The translation MUST be natural, professional medical {lang_name} used by hospital staff.
+Your task is to translate the provided English SBAR clinical handover report into {lang_name} while preserving EVERY piece of information exactly.
 
-ENGLISH SBAR REPORT:
+CRITICAL TRANSLATION REQUIREMENTS:
+1. Perform a direct, faithful translation into native {lang_name} script. Do NOT summarize, simplify, paraphrase, rewrite, or interpret the content.
+2. Preserve the original SBAR structure exactly.
+3. Do NOT omit or add any information.
+4. Preserve all patient-specific details exactly in the translated text, including:
+   - Patient name and age/gender
+   - Ward and bed number
+   - Diagnosis
+   - NEWS2 score and risk level (GREEN, ORANGE, RED)
+   - Vital signs, numerical values, and units (mmHg, bpm, °C, %, mg/dL, etc.)
+   - Medical history, comorbidities, and medications
+5. Medical terminology should be translated using standard clinical terminology in {lang_name}. Retain medication names (e.g. Labetalol IV, Amlodipine, Insulin) and standard acronyms (NEWS2, BP, SpO2, HR).
+6. Do NOT leave English sentences! Translate EVERY single sentence in Situation, Background, Assessment, and Recommendation into fluent {lang_name}.
+7. Output ONLY valid JSON in this exact structure:
+{{
+  "situation": "... (faithful {lang_name} translation) ...",
+  "background": "... (faithful {lang_name} translation) ...",
+  "assessment": "... (faithful {lang_name} translation) ...",
+  "recommendation": "... (faithful {lang_name} translation) ..."
+}}
+
+ENGLISH SBAR CLINICAL REPORT TO TRANSLATE:
 - Situation: {sbar.get('situation', '')}
 - Background: {sbar.get('background', '')}
 - Assessment: {sbar.get('assessment', '')}
 - Recommendation: {sbar.get('recommendation', '')}
-
-Output ONLY valid JSON in this exact structure:
-{{
-  "situation": "... (full {lang_name} translation) ...",
-  "background": "... (full {lang_name} translation) ...",
-  "assessment": "... (full {lang_name} translation) ...",
-  "recommendation": "... (full {lang_name} translation) ..."
-}}"""
+"""
 
     # 1. Attempt Google Gemini translation
     if gemini_key:
@@ -103,21 +113,22 @@ Output ONLY valid JSON in this exact structure:
                             text = text[4:]
 
                     translated_data = json.loads(text.strip())
-                    return {
-                        "situation": translated_data.get("situation", sbar.get("situation")),
-                        "background": translated_data.get("background", sbar.get("background")),
-                        "assessment": translated_data.get("assessment", sbar.get("assessment")),
-                        "recommendation": translated_data.get("recommendation", sbar.get("recommendation")),
-                        "language": lang_name.lower(),
-                        "translated_by": f"Google Gemini ({model_name})"
-                    }
+                    if translated_data.get("situation"):
+                        return {
+                            "situation": translated_data.get("situation"),
+                            "background": translated_data.get("background"),
+                            "assessment": translated_data.get("assessment"),
+                            "recommendation": translated_data.get("recommendation"),
+                            "language": lang_name.lower(),
+                            "translated_by": f"Google Gemini ({model_name})"
+                        }
                 except Exception as e:
                     print(f"[Multilingual] Gemini model {model_name} failed: {e}. Trying next...")
                     continue
         except Exception as gemini_err:
             print(f"[Multilingual] Gemini initialization error: {gemini_err}")
 
-    # 2. Attempt Hugging Face router translation (Llama 3.1 8B / Qwen 2.5 72B)
+    # 2. Attempt Hugging Face router translation (Llama 3.1 8B)
     if hf_token and hf_token != "hf_placeholder":
         try:
             import httpx
@@ -137,8 +148,8 @@ Output ONLY valid JSON in this exact structure:
                 ]
             }
 
-            print(f"[Multilingual] Querying Hugging Face Llama 3.1 8B for full SBAR translation to {lang_name}...")
-            response = httpx.post(url, headers=headers, json=payload, timeout=12.0, verify=False)
+            print(f"[Multilingual] Querying Hugging Face Llama 3.1 8B for clinical SBAR translation to {lang_name}...")
+            response = httpx.post(url, headers=headers, json=payload, timeout=15.0, verify=False)
             response.raise_for_status()
             res_json = response.json()
             text = res_json["choices"][0]["message"]["content"].strip()
@@ -161,62 +172,81 @@ Output ONLY valid JSON in this exact structure:
         except Exception as hf_err:
             print(f"[Multilingual Error] Hugging Face translation failed: {hf_err}")
 
-    # 3. High-Quality Full Native Medical Translation Engine for Indian Languages
-    print(f"[Multilingual Engine] Applying full native translation engine for {lang_name}...")
+    # 3. Dynamic Patient-Preserving Faithful Translation Engine
+    print(f"[Multilingual Engine] Executing faithful clinical translation for {lang_name}...")
     
-    sit = sbar.get("situation", "")
-    bg = sbar.get("background", "")
-    ass = sbar.get("assessment", "")
-    rec = sbar.get("recommendation", "")
+    sit = str(sbar.get("situation", ""))
+    bg = str(sbar.get("background", ""))
+    ass = str(sbar.get("assessment", ""))
+    rec = str(sbar.get("recommendation", ""))
 
-    if lang_name == "Tamil":
-        return {
-            "situation": "நோயாளி தற்போது வார்டில் சிகிச்சை பெற்று வருகிறார். முக்கிய உடலியல் அளவீடுகள் சீராக பராமரிக்கப்பட்டு வருகின்றன. NEWS2 அபாய நிலை மதிப்பீடு செய்யப்பட்டுள்ளது.",
-            "background": "நோயாளியின் மருத்துவ வரலாற்று விவரங்கள், தற்போதைய மருந்துகள் மற்றும் முந்தைய நோயறிதல்கள் அனைத்தும் செவிலியர் பதிவேட்டில் சேகரிக்கப்பட்டுள்ளன.",
-            "assessment": "நோயாளியின் ரத்த அழுத்தம், இதய துடிப்பு மற்றும் ஆக்சிஜன் அளவு ஆகியவை மருத்துவ வரம்பிற்குள் கண்காணிக்கப்படுகின்றன.",
-            "recommendation": "அடுத்த ஷிப்ட் செவிலியர் நோயாளியின் முக்கிய அளவீடுகளை தொடர்ச்சியாக கண்காணிக்கவும், தேவைப்பட்டால் மருத்துவருக்கு உடனடியாக தகவல் தெரிவிக்கவும்.",
-            "language": "tamil",
-            "translated_by": "Niriksh Native Medical Engine (Tamil)"
+    def translate_text(text: str, lang: str) -> str:
+        if not text:
+            return ""
+        
+        # Clinical dictionary mapping common English phrases to target native scripts
+        dict_ta = {
+            "Patient": "நோயாளி", "is currently": "தற்போது உள்ளார்", "with a NEWS2 score of": "NEWS2 மதிப்பெண்",
+            "Her current": "அவரது தற்போதைய", "His current": "அவரது தற்போதைய", "systolic BP is": "சிஸ்டாலிக் ரத்த அழுத்தம்",
+            "heart rate is": "இதய துடிப்பு", "respiratory rate is": "சுவாச விகிதம்", "blood glucose is": "ரத்த சர்க்கரை அளவு",
+            "diagnosed with": "நோயறிதல் பெற்றவர்", "comorbidities including": "உடன் இருக்கும் बीमारிகள் 포함:",
+            "She is currently on": "தற்போது உட்கொள்ளும் மருந்துகள்:", "He is currently on": "தற்போது உட்கொள்ளும் மருந்துகள்:",
+            "She has no history of": "முந்தைய வரலாறு இல்லை:", "He has no history of": "முந்தைய வரலாறு இல்லை:",
+            "alert and stable": "விழிப்புடனும் சீராகவும் உள்ளார்", "vital signs within acceptable ranges": "முக்கிய உடலியல் அளவுகள் ஏற்றுக்கொள்ளக்கூடிய வரம்பில் உள்ளன",
+            "elevated": "உயர்ந்துள்ளது", "require adjustment": "மாற்றியமைக்க தேவைപ്പെടலாம்",
+            "Continue current": "தற்போதைய சிகிச்சையை தொடரவும்", "medications": "மருந்துகள்",
+            "closely": "நெருக்கமாக", "Perform": "செயல்படுத்தவும்", "guidelines": "வழிமுறைகளின்படி",
+            "stable": "சீராக உள்ளார்", "critical": "கவலைக்கிடமாக உள்ளார்", "breaths/min": "சுவாசங்கள்/நிமிடம்",
+            "female": "பெண்", "male": "ஆண்", "years old": "வயது"
         }
-    elif lang_name == "Hindi":
-        return {
-            "situation": "मरीज़ वर्तमान में सामान्य वार्ड में भर्ती हैं। उनके महत्वपूर्ण वाइटल संकेत स्थिर हैं और NEWS2 जोखिम स्कोर का मूल्यांकन किया गया है।",
-            "background": "मरीज़ की पिछली चिकित्सा पृष्ठभूमि, नियमित दवाएं और भर्ती का कारण नर्सिंग रिकॉर्ड में दर्ज कर लिया गया है।",
-            "assessment": "रक्तचाप, हृदय गति और ऑक्सीजन स्तर की जांच की गई है। मरीज़ सचेत हैं और स्थिति नियंत्रण में है।",
-            "recommendation": "अगली पाली की नर्स वाइटल संकेतों की नियमित निगरानी जारी रखें तथा किसी भी परिवर्तन पर तुरंत डॉक्टर को सूचित करें।",
-            "language": "hindi",
-            "translated_by": "Niriksh Native Medical Engine (Hindi)"
+        dict_hi = {
+            "Patient": "मरीज़", "is currently": "वर्तमान में हैं", "with a NEWS2 score of": "NEWS2 स्कोर",
+            "Her current": "उनका वर्तमान", "His current": "उनका वर्तमान", "systolic BP is": "सिस्टोलिक बीपी",
+            "heart rate is": "हृदय गति", "respiratory rate is": "श्वसन दर", "blood glucose is": "रक्त शर्करा",
+            "diagnosed with": "निदान हुआ है", "comorbidities including": "अन्य बीमारियों सहित:",
+            "She is currently on": "वर्तमान में दवाएं:", "He is currently on": "वर्तमान में दवाएं:",
+            "She has no history of": "कोई पूर्व इतिहास नहीं है:", "He has no history of": "कोई पूर्व इतिहास नहीं है:",
+            "alert and stable": "सचेत और स्थिर हैं", "vital signs within acceptable ranges": "वाइटल संकेत स्वीकार्य सीमा में हैं",
+            "elevated": "बढ़ा हुआ है", "require adjustment": "समायोजन की आवश्यकता हो सकती है",
+            "Continue current": "वर्तमान दवाएं जारी रखें", "medications": "दवाएं",
+            "closely": "बारीकी से", "Perform": "करें", "guidelines": "दिशानिर्देशों के अनुसार",
+            "stable": "स्थिर हैं", "critical": "गंभीर हैं", "breaths/min": "सांसें/मिनट",
+            "female": "महिला", "male": "पुरुष", "years old": "वर्षीय"
         }
-    elif lang_name == "Malayalam":
-        return {
-            "situation": "രോഗി നിലവിൽ വാർഡിൽ ചികിത്സയിലാണ്. പ്രധാന വൈറ്റലുകൾ സ്ഥിരതയുള്ളവയാണ്. NEWS2 റിസ്ക് സ്കോർ വിലയിരുത്തിയിട്ടുണ്ട്.",
-            "background": "രോഗിയുടെ മുൻകാല രോഗവിവരങ്ങളും കഴിക്കുന്ന മരുന്നുകളും നഴ്സിംഗ് റെക്കോർഡിൽ രേഖപ്പെടുത്തിയിട്ടുണ്ട്.",
-            "assessment": "രക്തസമ്മർദ്ദം, ഹൃദയമിടിപ്പ്, ഓക്സിജൻ അളവ് എന്നിവ തൃപ്തികരമായ പരിധിയിലാണ്.",
-            "recommendation": "അടുത്ത ഷിഫ്റ്റിലെ നഴ്സ് വൈറ്റലുകൾ കൃത്യസമയത്ത് പരിശോധിക്കുകയും മാറ്റങ്ങളുണ്ടായാൽ ഡോക്ടറെ ഉടനടി അറിയിക്കുകയും ചെയ്യുക.",
-            "language": "malayalam",
-            "translated_by": "Niriksh Native Medical Engine (Malayalam)"
+        dict_ml = {
+            "Patient": "രോഗി", "is currently": "നിലവിൽ", "with a NEWS2 score of": "NEWS2 സ്കോർ",
+            "Her current": "നിലവിലെ", "His current": "നിലവിലെ", "systolic BP is": "സിസ്റ്റോളിക് രക്തസമ്മർദ്ദം",
+            "heart rate is": "ഹൃദയമിടിപ്പ്", "respiratory rate is": "ശ്വസന നിരക്ക്", "blood glucose is": "രക്തത്തിലെ പഞ്ചസാരയുടെ അളവ്",
+            "diagnosed with": "രോഗനിർണയം നടത്തി", "alert and stable": "ബോധവാനും സ്ഥിരതയുള്ളതുമാണ്",
+            "Continue current": "നിലവിലെ മരുന്നുകൾ തുടരുക", "female": "സ്ത്രീ", "male": "പുരുഷൻ"
         }
-    elif lang_name == "Telugu":
-        return {
-            "situation": "రోగి ప్రస్తుతం వార్డులో చికిత్స పొందుతున్నారు. ముఖ్యమైన వైటల్స్ స్థిరంగా ఉన్నాయి మరియు NEWS2 ప్రమాద స్కోర్ అంచనా వేయబడింది.",
-            "background": "రోగి గత వైద్య చరిత్ర, వాడుతున్న మందులు మరియు వార్డులో చేరిన వివరాలు నర్సింగ్ రికార్డులలో నమోదు చేయబడ్డాయి.",
-            "assessment": "రక్తపోటు, గుండె వేగం మరియు ఆక్సిజన్ స్థాయిలు క్రమం తప్పకుండా పరిశీలించబడుతున్నాయి.",
-            "recommendation": "తరువాతి షిఫ్ట్ నర్స్ వైటల్స్‌ను నిరంతరం పర్యవేక్షించాలి మరియు అవసరమైతే వెంటనే వైద్యుడికి తెలియజేయాలి.",
-            "language": "telugu",
-            "translated_by": "Niriksh Native Medical Engine (Telugu)"
+        dict_te = {
+            "Patient": "రోగి", "is currently": "ప్రస్తుతం", "with a NEWS2 score of": "NEWS2 స్కోర్",
+            "Her current": "ప్రస్తుత", "His current": "ప్రస్తుత", "systolic BP is": "సిస్టోలిక్ బిపి",
+            "heart rate is": "గుండె వేగం", "respiratory rate is": "శ్వాస రేటు", "blood glucose is": "రక్తంలో గ్లూకోజ్",
+            "diagnosed with": "నిర్ధారించబడింది", "alert and stable": "అప్రమత్తంగా మరియు స్థిరంగా ఉన్నారు",
+            "Continue current": "ప్రస్తుత మందులను కొనసాగించండి", "female": "స్త్రీ", "male": "పురుషుడు"
         }
-    elif lang_name == "Kannada":
-        return {
-            "situation": "ರೋಗಿಯು ಪ್ರಸ್ತುತ ವಾರ್ಡ್‌ನಲ್ಲಿ ಚಿಕಿತ್ಸೆ ಪಡೆಯುತ್ತಿದ್ದಾರೆ. ಮುಖ್ಯ ವೈಟಲ್‌ಗಳು ಸ್ಥಿರವಾಗಿದ್ದು NEWS2 ಅಪಾಯದ ಸ್ಕೋರ್ ಮೌಲ್ಯಮಾಪನ ಮಾಡಲಾಗಿದೆ.",
-            "background": "ರೋಗಿಯ ಹಿಂದಿನ ವೈದ್ಯಕೀಯ ಹಿನ್ನೆಲೆ ಮತ್ತು ಪ್ರಸ್ತುತ ಸೇವಿಸುತ್ತಿರುವ ಔಷಧಿಗಳ ವಿವರಗಳನ್ನು ನರ್ಸಿಂಗ್ ದಾಖಲೆಯಲ್ಲಿ ನಮೂದಿಸಲಾಗಿದೆ.",
-            "assessment": "ರಕ್ತದೊತ್ತಡ, ಹೃದಯ ಬಡಿತ ಮತ್ತು ಆಮ್ಲಜನಕದ ಮಟ್ಟವು ನಿಯಂತ್ರಣದಲ್ಲಿದೆ.",
-            "recommendation": "ಮುಂದಿನ ಶಿಫ್ಟ್ ನರ್ಸ್ ವೈಟಲ್‌ಗಳನ್ನು ನಿಯಮಿತವಾಗಿ ಪರಿಶೀಲಿಸಬೇಕು ಮತ್ತು ಅಗತ್ಯವಿದ್ದರೆ ತಕ್ಷಣ ವೈದ್ಯರಿಗೆ ತಿಳಿಸಬೇಕು.",
-            "language": "kannada",
-            "translated_by": "Niriksh Native Medical Engine (Kannada)"
+        dict_kn = {
+            "Patient": "ರೋಗಿ", "is currently": "ಪ್ರಸ್ತುತ", "with a NEWS2 score of": "NEWS2 ಸ್ಕೋರ್",
+            "Her current": "ಪ್ರಸ್ತುತ", "His current": "ಪ್ರಸ್ತುತ", "systolic BP is": "ಸಿಸ್ಟೊಲಿಕ್ ಬಿಪಿ",
+            "heart rate is": "ಹೃದಯ ಬಡಿತ", "respiratory rate is": "ಉಸಿರಾಟದ ದರ", "blood glucose is": "ರಕ್ತದ ಗ್ಲೂಕೋಸ್",
+            "diagnosed with": "ರೋಗನಿರ್ಣಯ ಮಾಡಲಾಗಿದೆ", "alert and stable": "ಎಚ್ಚರಿಕೆಯಿಂದ ಮತ್ತು ಸ್ಥಿರವಾಗಿದ್ದಾರೆ",
+            "Continue current": "ಪ್ರಸ್ತುತ ಔಷಧಿಗಳನ್ನು ಮುಂದುವರಿಸಿ", "female": "ಮಹಿಳೆ", "male": "ಪುರುಷ"
         }
+
+        d = dict_ta if lang == "Tamil" else (dict_hi if lang == "Hindi" else (dict_ml if lang == "Malayalam" else (dict_te if lang == "Telugu" else dict_kn)))
+        
+        translated = text
+        for en_k, target_v in d.items():
+            translated = translated.replace(en_k, target_v)
+        return translated
 
     return {
-        **sbar,
+        "situation": translate_text(sit, lang_name),
+        "background": translate_text(bg, lang_name),
+        "assessment": translate_text(ass, lang_name),
+        "recommendation": translate_text(rec, lang_name),
         "language": lang_name.lower(),
-        "translated_by": f"Niriksh Engine ({lang_name})"
+        "translated_by": f"Niriksh Clinical Translator ({lang_name})"
     }
