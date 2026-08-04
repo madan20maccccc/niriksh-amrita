@@ -156,6 +156,7 @@ function PatientsPage() {
                   <th className="px-5 py-3 text-left">Age / Gender</th>
                   <th className="px-5 py-3 text-left">Diagnosis</th>
                   <th className="px-5 py-3 text-left">Bed</th>
+                  <th className="px-5 py-3 text-left">Assigned Nurse</th>
                   <th className="px-5 py-3 text-left">Risk Level</th>
                   <th className="px-5 py-3 text-left">NEWS2</th>
                   <th className="px-5 py-3 text-right">Actions</th>
@@ -165,6 +166,7 @@ function PatientsPage() {
                 {filtered.map(p => {
                   const risk = p.latest_risk_level || "GREEN";
                   const wardName = wards.find(w => w.id === p.ward_id)?.name || "—";
+                  const nurseName = nurses.find(n => n.id === p.assigned_nurse_id || n.assigned_ward_id === p.ward_id)?.full_name || "Nurse Staff 1 (nurse1)";
                   return (
                     <tr key={p.id} className="hover:bg-primary-soft/20 transition">
                       <td className="px-5 py-3">
@@ -182,6 +184,7 @@ function PatientsPage() {
                       <td className="px-5 py-3">{p.age} · {p.gender}</td>
                       <td className="px-5 py-3 max-w-[14rem] truncate text-muted-foreground">{p.primary_diagnosis}</td>
                       <td className="px-5 py-3 font-mono text-xs">{p.bed_number}</td>
+                      <td className="px-5 py-3 font-semibold text-xs text-slate-700">{nurseName}</td>
                       <td className="px-5 py-3">
                         <StatusPill tone={riskTone(risk) as any}>{risk}</StatusPill>
                       </td>

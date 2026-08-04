@@ -1,7 +1,7 @@
 import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Filter, Loader2, CheckCircle2, Info, Eye, Smartphone } from "lucide-react";
+import { AlertTriangle, Filter, Loader2, CheckCircle2, Info, Eye, Mail } from "lucide-react";
 import { Card, SectionHeader } from "@/components/ui/section";
 import { StatusPill } from "@/components/ui/status-pill";
 import { getAlerts, acknowledgeAlert, explainAlert, getWards } from "@/lib/api";
@@ -215,14 +215,14 @@ function AlertsPage() {
                         </td>
                         <td className="px-5 py-4 text-right whitespace-nowrap">
                           <div className="flex justify-end gap-1.5">
-                            {/* Direct SMS via phone — 100% FREE */}
+                            {/* Direct Email to Doctor */}
                             {(a.risk_level === "RED" || a.risk_level === "ORANGE") && (
                               <a
-                                href={`sms:${wardPhoneMap[a.ward_id] || ""}?body=${encodeURIComponent(`URGENT NirikshAmrita ALERT\nPatient: ${a.patient_name || "Patient"}\nRisk: ${a.risk_level}\n${a.message}\nImmediate review required.`)}`}
-                                className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 text-xs font-semibold inline-flex items-center gap-1"
-                                title="Send direct SMS via your phone — FREE"
+                                href={`mailto:madan.m200607@gmail.com?subject=${encodeURIComponent(`[CRITICAL ALERT] ${a.risk_level} Risk - Patient Alert`)}&body=${encodeURIComponent(`NURSEWATCH AI ALERT\nPatient: ${a.patient_name || "Patient"}\nRisk: ${a.risk_level}\nDetails: ${a.message}\nTimestamp: ${new Date().toLocaleString()}\n\nImmediate clinical review required.`)}`}
+                                className="rounded-lg bg-red-600 hover:bg-red-700 text-white px-2.5 py-1.5 text-xs font-semibold inline-flex items-center gap-1 shadow-sm"
+                                title="Send direct alert email to assigned physician"
                               >
-                                <Smartphone className="h-3.5 w-3.5" /> SMS Doctor
+                                <Mail className="h-3.5 w-3.5" /> Email Doctor
                               </a>
                             )}
                             <button

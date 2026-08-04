@@ -21,15 +21,15 @@ export function Logo({ size = 44, withWordmark = false, className, tone = "defau
         <div className="leading-tight">
           <div
             className={cn(
-              "font-display font-bold text-foreground tracking-tight",
+              "font-display font-bold tracking-tight text-white",
               tone === "compact" ? "text-lg" : "text-xl",
             )}
           >
-            NurseWatch<span className="text-primary">AI</span>
+            NurseWatch<span className="text-sky-400">AI</span>
           </div>
           {tone !== "compact" && (
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mt-0.5">
-              Amrita Hospital
+            <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-300 mt-0.5">
+              Amrita School of AI
             </div>
           )}
         </div>
