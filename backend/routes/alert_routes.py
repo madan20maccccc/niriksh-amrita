@@ -92,7 +92,14 @@ def list_alerts(
         query = query.filter(models.Alert.patient_id.in_(p_ids))
 
     alerts = query.order_by(models.Alert.created_at.desc()).limit(limit).all()
-    return [schemas.AlertOut.model_validate(a) for a in alerts]
+    
+    res = []
+    for a in alerts:
+        p = db.query(models.Patient).filter(models.Patient.id == a.patient_id).first()
+        adict = schemas.AlertOut.model_validate(a).model_dump()
+        adict["patient_name"] = p.full_name if p else "Unknown"
+        res.append(adict)
+    return res
 
 
 @router.post("/{alert_id}/acknowledge", response_model=schemas.AlertOut)
@@ -136,7 +143,14 @@ def get_patient_alerts(
         .limit(20)
         .all()
     )
-    return [schemas.AlertOut.model_validate(a) for a in alerts]
+    res = []
+    p = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    pname = p.full_name if p else "Unknown"
+    for a in alerts:
+        adict = schemas.AlertOut.model_validate(a).model_dump()
+        adict["patient_name"] = pname
+        res.append(adict)
+    return res
 
 
 @router.get("/active/count")

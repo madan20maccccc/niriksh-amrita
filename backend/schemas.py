@@ -212,6 +212,7 @@ class AlertOut(BaseModel):
     acknowledged_at: Optional[datetime]
     acknowledged_by: Optional[int]
     re_escalated: bool
+    patient_name: Optional[str] = None
     class Config:
         from_attributes = True
 
