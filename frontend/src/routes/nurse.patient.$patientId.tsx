@@ -507,28 +507,11 @@ function PatientDetail() {
             <SectionHeader title="Shift Handover Sheet (SBAR)" hint="AI generated Situation-Background-Assessment-Recommendation notes" />
           </div>
           
-          {/* SBAR Translation Toolbar */}
-          <div className="flex items-center gap-1.5 rounded-xl border border-border bg-slate-50 p-1">
-            <span className="text-[10px] font-bold text-muted-foreground px-2 flex items-center gap-1">
-              <Globe className="h-3 w-3" /> LANG:
+          {/* English Standard SBAR Badge */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+              English SBAR Report
             </span>
-            {[
-              { id: "english", label: "EN" },
-              { id: "malayalam", label: "മലയാളം (ML)" },
-              { id: "telugu", label: "తెలుగు (TE)" }
-            ].map(lang => (
-              <button
-                key={lang.id}
-                onClick={() => handleLanguageChange(lang.id)}
-                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
-                  sbarLang === lang.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {lang.label}
-              </button>
-            ))}
           </div>
         </div>
 
