@@ -105,9 +105,8 @@ Please provide a concise, factual, and helpful answer in 2-4 sentences. Do not a
     # 2. Try Hugging Face router (Llama 3.1 8B - fast & reliable)
     if hf_token and hf_token != "hf_placeholder":
         try:
-            import urllib.request
-            import ssl
-            
+            import httpx
+
             url = "https://router.huggingface.co/v1/chat/completions"
             headers = {
                 "Authorization": f"Bearer {hf_token}",
@@ -122,18 +121,12 @@ Please provide a concise, factual, and helpful answer in 2-4 sentences. Do not a
                     }
                 ]
             }
-            context = ssl._create_unverified_context()
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers=headers
-            )
-            
+
             print("[RAG Agent] Querying Hugging Face Llama 3.1 8B for RAG answer...")
-            with urllib.request.urlopen(req, context=context, timeout=25) as response:
-                res_body = response.read().decode("utf-8")
-                res_json = json.loads(res_body)
-                return res_json["choices"][0]["message"]["content"].strip()
+            response = httpx.post(url, headers=headers, json=payload, timeout=30.0, verify=False)
+            response.raise_for_status()
+            res_json = response.json()
+            return res_json["choices"][0]["message"]["content"].strip()
         except Exception as hf_err:
             print(f"[RAG Agent Error] Hugging Face RAG failed: {hf_err}")
 

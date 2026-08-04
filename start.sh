@@ -10,6 +10,10 @@ cd /app/backend
 
 # Start FastAPI backend in the background
 echo "[START] Starting FastAPI Backend on port 8000..."
+# Ensure Python handles UTF-8 for Indian language translations
+export PYTHONIOENCODING=utf-8
+export PYTHONUTF8=1
+
 ./venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 
 # Start Frontend Node.js production server in the foreground

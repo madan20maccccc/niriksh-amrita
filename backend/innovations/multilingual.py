@@ -119,9 +119,8 @@ Only output the JSON translation, no extra commentary."""
     # 2. Attempt Hugging Face router translation (Llama 3.1 8B - fast & reliable)
     if hf_token and hf_token != "hf_placeholder":
         try:
-            import urllib.request
-            import ssl
-            
+            import httpx
+
             url = "https://router.huggingface.co/v1/chat/completions"
             headers = {
                 "Authorization": f"Bearer {hf_token}",
@@ -136,33 +135,27 @@ Only output the JSON translation, no extra commentary."""
                     }
                 ]
             }
-            context = ssl._create_unverified_context()
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers=headers
-            )
-            
-            print("[Multilingual] Querying Hugging Face Llama 3.1 8B for SBAR translation...")
-            with urllib.request.urlopen(req, context=context, timeout=25) as response:
-                res_body = response.read().decode("utf-8")
-                res_json = json.loads(res_body)
-                text = res_json["choices"][0]["message"]["content"].strip()
-                
-                if text.startswith("```"):
-                    text = text.split("```")[1]
-                    if text.startswith("json"):
-                        text = text[4:]
-                        
-                translated_data = json.loads(text.strip())
-                return {
-                    "situation": translated_data.get("situation", sbar.get("situation")),
-                    "background": translated_data.get("background", sbar.get("background")),
-                    "assessment": translated_data.get("assessment", sbar.get("assessment")),
-                    "recommendation": translated_data.get("recommendation", sbar.get("recommendation")),
-                    "language": lang_name.lower(),
-                    "translated_by": "Hugging Face (Llama-3.1-8B)"
-                }
+
+            print(f"[Multilingual] Querying Hugging Face Llama 3.1 8B for SBAR translation to {lang_name}...")
+            response = httpx.post(url, headers=headers, json=payload, timeout=30.0, verify=False)
+            response.raise_for_status()
+            res_json = response.json()
+            text = res_json["choices"][0]["message"]["content"].strip()
+
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+
+            translated_data = json.loads(text.strip())
+            return {
+                "situation": translated_data.get("situation", sbar.get("situation")),
+                "background": translated_data.get("background", sbar.get("background")),
+                "assessment": translated_data.get("assessment", sbar.get("assessment")),
+                "recommendation": translated_data.get("recommendation", sbar.get("recommendation")),
+                "language": lang_name.lower(),
+                "translated_by": "Hugging Face (Llama-3.1-8B)"
+            }
         except Exception as hf_err:
             print(f"[Multilingual Error] Hugging Face translation failed: {hf_err}")
 
