@@ -158,10 +158,10 @@ function PatientDetail() {
     setSbarWarning(null);
     try {
       const report = await generateSbarNow(pId, lang);
+      setSbar(report);
       if ((report as any).translation_error) {
         setSbarWarning("⚠️ " + (report as any).translation_error);
       } else {
-        setSbar(report);
         setSbarWarning(null);
       }
     } catch (err: any) {

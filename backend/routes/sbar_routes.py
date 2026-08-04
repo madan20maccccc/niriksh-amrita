@@ -36,30 +36,20 @@ def generate_sbar_now(
     """Manually trigger SBAR generation for a patient"""
     shift = get_current_shift()
     
-    # Try to find an existing SBAR for this patient and shift
-    report = (
-        db.query(models.SBARReport)
-        .filter(models.SBARReport.patient_id == patient_id, models.SBARReport.shift == shift)
-        .order_by(models.SBARReport.generated_at.desc())
-        .first()
-    )
+    # Always generate fresh SBAR for the patient using latest vitals
+    report = generate_shift_sbar(db, patient_id, shift)
     
     if not report:
-        # Fallback: find any SBAR generated in the last 4 hours
-        from datetime import datetime, timedelta
-        four_hours_ago = datetime.now() - timedelta(hours=4)
+        # Fallback: check if any existing SBAR report exists for this patient
         report = (
             db.query(models.SBARReport)
-            .filter(models.SBARReport.patient_id == patient_id, models.SBARReport.generated_at >= four_hours_ago)
+            .filter(models.SBARReport.patient_id == patient_id)
             .order_by(models.SBARReport.generated_at.desc())
             .first()
         )
         
     if not report:
-        report = generate_shift_sbar(db, patient_id, shift)
-        
-    if not report:
-        raise HTTPException(status_code=404, detail="No vitals found for this shift to generate SBAR")
+        raise HTTPException(status_code=404, detail="No vitals found to generate SBAR")
     
     sbar_out = schemas.SBAROut.model_validate(report)
     if lang:

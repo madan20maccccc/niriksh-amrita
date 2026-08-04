@@ -17,3 +17,25 @@ This is an automated clinical notification. Please review the patient immediatel
 — NirikshAmrita Hospital Alert System
 
 
+--- EMAIL SENT TO madan.m200607@gmail.com ---
+Subject: [CRITICAL ALERT] RED Risk - Patient Govind Patel (Bed Bed 12)
+🏥 NURSEWATCH AI - CLINICAL ALERT SYSTEM
+===================================================
+Timestamp: 2026-08-04 19:40:35
+Patient Name: Govind Patel
+Bed Number: Bed 12
+Ward/Location: ICU Ward 3
+
+NEWS2 Score: 9
+Risk Classification: RED
+
+ALERT DETAILS:
+Systolic BP: 85 mmHg (Score 3)
+SpO2: 88% (Score 3)
+Heart Rate: 125 bpm (Score 2)
+Temp: 38.8 C (Score 1)
+===================================================
+This is an automated clinical notification. Please review the patient immediately.
+— NirikshAmrita Hospital Alert System
+
+
