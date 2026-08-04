@@ -247,35 +247,6 @@ export async function explainAlert(alertId: number) {
   return request(`/innovations/alerts/${alertId}/explain`);
 }
 
-// ─────────────────────────────────────────────
-// ADMIN OPERATIONS (CRUD)
-// ─────────────────────────────────────────────
-export async function createPatient(patientData: any) {
-  return request("/patients/", {
-    method: "POST",
-    body: JSON.stringify(patientData),
-  });
-}
-
-export async function updatePatient(patientId: number, patientData: any) {
-  return request(`/patients/${patientId}`, {
-    method: "PUT",
-    body: JSON.stringify(patientData),
-  });
-}
-
-export async function deletePatient(patientId: number) {
-  return request(`/patients/${patientId}`, {
-    method: "DELETE",
-  });
-}
-
-export async function updateUser(userId: number, userData: any) {
-  return request(`/auth/users/${userId}`, {
-    method: "PUT",
-    body: JSON.stringify(userData),
-  });
-}
 
 export async function deactivateUser(userId: number) {
   return request(`/auth/users/${userId}`, {
